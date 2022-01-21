@@ -6,9 +6,8 @@ import wpilib
 
 class FROGbot(magicbot.MagicRobot):
     """
-        Initialize components here.
+        Initialize components with createObjects.
     """
-
     def createObjects(self):
         """Create motors and inputs"""
         pass
@@ -23,9 +22,11 @@ class FROGbot(magicbot.MagicRobot):
 
     def testInit(self):
         """Called when test mode starts; optional"""
+        pass
 
     def testPeriodic(self):
         """Called on each iteration of the control loop"""
+        pass
 
 
 if __name__ == "__main__":
