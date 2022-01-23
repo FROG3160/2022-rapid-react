@@ -18,6 +18,7 @@ class SwerveModule:
     def __init__(self):
         # set initial states for the component
         self.velocity = 0
+        # TODO set angle to sensed angle from CANCoder?
         self.angle = 0
         self.enabled = False
 

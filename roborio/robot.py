@@ -25,15 +25,15 @@ class FROGbot(magicbot.MagicRobot):
         self.swerveRearLeft_drive = WPI_TalonFX(13)
         self.swerveRearRight_drive = WPI_TalonFX(14)
         #Swerve steer motors
-        self.swerveLeftFront_steer = WPI_TalonFX(21)
-        self.swerveRightFront_steer = WPI_TalonFX(22)
-        self.swerveLeftRear_steer = WPI_TalonFX(23)
-        self.swerveRightRear_steer = WPI_TalonFX(24)
+        self.swerveFrontLeft_steer = WPI_TalonFX(21)
+        self.swerveFrontRight_steer = WPI_TalonFX(22)
+        self.swerveRearLeft_steer = WPI_TalonFX(23)
+        self.swerveRearRight_steer = WPI_TalonFX(24)
         #Swerve steer encoders (canifier)
-        self.swerveLeftFront_encoder = CANCoder(31) 
-        self.swerveRightFront_encoder = CANCoder(32) 
-        self.swerveLeftRear_encoder = CANCoder(33)
-        self.swerveRightRear_encoder = CANCoder(34) 
+        self.swerveFrontLeft_encoder = CANCoder(31) 
+        self.swerveFrontRight_encoder = CANCoder(32)
+        self.swerveRearLeft_encoder = CANCoder(33)
+        self.swerveRearRight_encoder = CANCoder(34)
 
 
 
