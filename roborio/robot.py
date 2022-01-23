@@ -3,31 +3,37 @@
 from ctre import CANCoder, WPI_TalonFX
 import magicbot
 import wpilib
+from components.drivetrain import SwerveModule, SwerveChassis
 
 
 class FROGbot(magicbot.MagicRobot):
     """
         Initialize components here.
     """
-
+    swerveChassis: SwerveChassis
+    
+    swerveFrontLeft: SwerveModule
+    swerveFrontRight: SwerveModule
+    swerveRearLeft: SwerveModule
+    swerveRearRight: SwerveModule
 
     def createObjects(self):
         """Create motors and inputs"""
         #Swerve drive motors
-        self.driveLeftFront = WPI_TalonFX(11)
-        self.driveRightFront = WPI_TalonFX(12)
-        self.driveLeftRear = WPI_TalonFX(13)
-        self.driveRightRear = WPI_TalonFX(14)
+        self.swerveFrontLeft_drive = WPI_TalonFX(11)
+        self.swerveFrontRight_drive = WPI_TalonFX(12)
+        self.swerveRearLeft_drive = WPI_TalonFX(13)
+        self.swerveRearRight_drive = WPI_TalonFX(14)
         #Swerve steer motors
-        self.steerLeftFront = WPI_TalonFX(21)
-        self.steerRightFront = WPI_TalonFX(22)
-        self.steerLeftRear = WPI_TalonFX(23)
-        self.steerRightRear = WPI_TalonFX(24)
+        self.swerveLeftFront_steer = WPI_TalonFX(21)
+        self.swerveRightFront_steer = WPI_TalonFX(22)
+        self.swerveLeftRear_steer = WPI_TalonFX(23)
+        self.swerveRightRear_steer = WPI_TalonFX(24)
         #Swerve steer encoders (canifier)
-        self.encoderLeftFront = CANCoder(31) 
-        self.encoderRightFront = CANCoder(32) 
-        self.encoderLeftRear = CANCoder(33)
-        self.encoderRightRear = CANCoder(34) 
+        self.swerveLeftFront_encoder = CANCoder(31) 
+        self.swerveRightFront_encoder = CANCoder(32) 
+        self.swerveLeftRear_encoder = CANCoder(33)
+        self.swerveRightRear_encoder = CANCoder(34) 
 
 
 

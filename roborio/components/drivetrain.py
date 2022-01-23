@@ -10,77 +10,13 @@ trackwidth = 24
 wheelbase = 36
 
 
-class DriveMotor:
-    def __init__(self, motorID):
-        self.drivemotor = WPI_TalonFX(motorID)
-        self.enabled = False
-        self.velocity = 0
-
-    def disable(self):
-        self.enabled = False
-
-    def enable(self):
-        self.enabled = True
-
-    def setup(self):
-        # magicbot calls setup() when creating components
-        # configure motors and other objects here.
-        self.drivemotor.setInverted(TalonFXInvertType.Clockwise)
-
-    def setVelocity(self, value):
-        self.velocity = value
-
-    def execute(self):
-        # execute is called each iteration
-        # define what needs to happen if the
-        # component is enabled/disabled
-        if self.enabled:
-            # drive at the speed
-            self.drivemotor.set(VELOCITY_MODE, self.velocity)
-        else:
-            # stop
-            self.drivemotor.set(0)
-
-
-class SteerMotor:
-    def __init__(self, motorID):
-        self.steermotor = WPI_TalonFX(motorID)
-        self.enabled = False
-        self.position = 0
-
-    def disable(self):
-        self.enabled = False
-
-    def enable(self):
-        self.enabled = True
-
-    def setup(self):
-        # magicbot calls setup() when creating components
-        # configure motors and other objects here.
-        self.steermotor.setInverted(TalonFXInvertType.Clockwise)
-
-    def setPosition(self, angle):
-        self.position = angle
-
-    def execute(self):
-        # execute is called each iteration
-        # define what needs to happen if the
-        # component is enabled/disabled
-        if self.enabled:
-            # drive at the speed
-            self.steermotor.set(POSITION_MODE, self.position)
-        else:
-            # stop - don't send voltage
-            self.steermotor.set(0)
-
-
 class SwerveModule:
-    # TODO: add Cancoder object for steer
+    drive: WPI_TalonFX
+    steer: WPI_TalonFX
+    encoder: CANCoder
 
-    def __init__(self, driveID, steerID):
+    def __init__(self):
         # set initial states for the component
-        self.steer = SteerMotor(steerID)
-        self.drive = DriveMotor(driveID)
         self.velocity = 0
         self.angle = 0
         self.enabled = False
@@ -98,29 +34,41 @@ class SwerveModule:
     def setup(self):
         # magicbot calls setup() when creating components
         # configure motors and other objects here.
-        pass
+        # configure steer motor
+        self.steer.setInverted(TalonFXInvertType.Clockwise)
+        # configure drive motor
+        self.steer.setInverted(TalonFXInvertType.Clockwise)
+        # configure CANcoder
+
+    def setAngle(self, angle):
+        self.angle = angle
+
+    def setVelocity(self, velocity):
+        self.velocity = velocity
 
     def execute(self):
         # execute is called each iteration
         # define what needs to happen if the
         # component is enabled/disabled
         if self.enabled:
-
-            self.steer.setPosition(self.angle)
-            self.drive.setVelocity(self.velocity)
+            self.steer.set(POSITION_MODE, self.angle)
+            self.drive.set(VELOCITY_MODE, self.velocity)
         else:
             # TODO: decide whether we should
             # zero velocity on disable.
-            pass
+            self.steer.set(0)
+            self.drive.set(0)
 
 
 class SwerveChassis:
-    def __init__(self, lfModule, rfModule, lrModule, rrModule):
-        self.lfSwerve = SwerveModule(**lfModule)
-        self.rfSwerve = SwerveModule(**rfModule)
-        self.lrSwerve = SwerveModule(**lrModule)
-        self.rrSwerve = SwerveModule(**rrModule)
-        # TODO: double check the signs on the Translation2d
+
+    swerveFrontLeft: SwerveModule
+    swerveFrontRight: SwerveModule
+    swerveRearLeft: SwerveModule
+    swerveRearRight: SwerveModule
+
+    def __init__(self):
+
         self.kinematics = SwerveDrive4Kinematics(
             Translation2d(trackwidth / 2, wheelbase / 2),
             Translation2d(trackwidth / 2, -wheelbase / 2),
@@ -131,12 +79,22 @@ class SwerveChassis:
 
     def disable(self):
         self.enabled = False
-        for module in [self.lfSwerve, self.rfSwerve, self.lrSwerve, self.rrSwerve]:
+        for module in [
+            self.swerveFrontLeft,
+            self.swerveFrontRight,
+            self.swerveRearLeft,
+            self.swerveRearRight,
+        ]:
             module.disable()
 
     def enable(self):
         self.enabled = True
-        for module in [self.lfSwerve, self.rfSwerve, self.lrSwerve, self.rrSwerve]:
+        for module in [
+            self.swerveFrontLeft,
+            self.swerveFrontRight,
+            self.swerveRearLeft,
+            self.swerveRearRight,
+        ]:
             module.enable()
 
     def setup(self):
