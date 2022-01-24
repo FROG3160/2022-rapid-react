@@ -23,6 +23,18 @@ kMaxMetersPerSec = kMaxFeetPerSec * 0.3038
 kMaxRevolutionsPerSec = 2
 kMaxRadiansPerSec = kMaxRevolutionsPerSec * 2 * math.pi
 
+kWheelDiameter = 0.1016  # in meters  TODO: Confirm this value
+kTicksPerRotation = 2048
+# the multiple of 10 in the divisor is to get to how many ticks per 100ms
+# or 1/10th of a second.  Multiplying the speed of SwerveModuleState by
+# this multiplier will give us the velocity to give the TalonFX in ticks/100ms
+kVelocityMultiplier = kTicksPerRotation / (10 * kWheelDiameter * math.pi)
+
+
+# TODO: Incorprate PID configuration
+# steer PID: 0.2, 0.0, 0.2
+# drive PID:
+
 
 class SwerveModule:
     drive: WPI_TalonFX
@@ -65,9 +77,7 @@ class SwerveModule:
         # False = CCW rotation of magnet is positive
         self.encoder.configSensorDirection(False)
         # TODO: create variable and pass in from robot.py
-        self.encoder.configMagnetOffset(
-            0
-        )  
+        self.encoder.configMagnetOffset(0)
         self.encoder.configSensorInitializationStrategy(
             SensorInitializationStrategy.BootToAbsolutePosition
         )
@@ -94,8 +104,12 @@ class SwerveModule:
         # define what needs to happen if the
         # component is enabled/disabled
         if self.enabled:
-            self.steer.set(POSITION_MODE, self.angle)
-            self.drive.set(VELOCITY_MODE, self.velocity)
+            # TODO: confirm correct units for position mode
+            self.steer.set(POSITION_MODE, self.state.angle.degrees())
+            # set velocity for Falcon to ticks/100ms
+            self.drive.set(
+                VELOCITY_MODE, self.state.speed * kVelocityMultiplier
+            )
         else:
             # TODO: decide whether we should
             # zero velocity on disable.
@@ -129,7 +143,9 @@ class SwerveChassis:
         # takes values from the joystick and translates it
         # into chassis movement
         self.speeds = ChassisSpeeds(
-            vX * kMaxMetersPerSec, vY * kMaxMetersPerSec, vT * kMaxRadiansPerSec
+            vX * kMaxMetersPerSec,
+            vY * kMaxMetersPerSec,
+            vT * kMaxRadiansPerSec
         )
 
     def enable(self):
@@ -169,6 +185,7 @@ class SwerveChassis:
         if self.enabled:
             # pass in the commanded speeds and center of rotation
             # and get back the speed and angle values for each module
+            # TODO: Change to field oriented
             module_states = self.kinematics.toSwerveModuleStates(
                 self.speeds, self.center
             )
