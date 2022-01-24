@@ -7,10 +7,11 @@ from components.drivetrain import SwerveModule, SwerveChassis
 from wpimath.geometry import Translation2d
 
 # robot characteristics
-# TODO: check to see if we need to convert to feet or meters
-#   for the kinematics to work correctly
-trackwidth = 27.75 # inches between wheels side to side
-wheelbase = 21.75 # inches between wheels front to back
+# we are specifying inches and dividing by 12 to get feet,
+# giving us values that can be used with the fromFeet method
+# to get a correct Translation2d object
+trackwidth = 27.75 / 12  #  feet between wheels side to side
+wheelbase = 21.75 / 12  # feet between wheels front to back
 
 
 class FROGbot(magicbot.MagicRobot):
@@ -43,10 +44,19 @@ class FROGbot(magicbot.MagicRobot):
         self.swerveRearLeft_encoder = CANCoder(33)
         self.swerveRearRight_encoder = CANCoder(34)
         # Swerve module locations
-        self.swerveFrontLeft_location = Translation2d(trackwidth / 2, wheelbase / 2)
-        self.swerveFrontRight_location = Translation2d(trackwidth / 2, -wheelbase / 2)
-        self.swerveRearLeft_location = Translation2d(-trackwidth / 2, wheelbase / 2)
-        self.swerveRearRight_location = Translation2d(-trackwidth / 2, -wheelbase / 2)
+        # TODO: move to swerveChassis?
+        self.swerveFrontLeft_location = Translation2d.fromFeet(
+            trackwidth / 2, wheelbase / 2
+        )
+        self.swerveFrontRight_location = Translation2d.fromFeet(
+            trackwidth / 2, -wheelbase / 2
+        )
+        self.swerveRearLeft_location = Translation2d.fromFeet(
+            -trackwidth / 2, wheelbase / 2
+        )
+        self.swerveRearRight_location = Translation2d.fromFeet(
+            -trackwidth / 2, -wheelbase / 2
+        )
 
     def teleopInit(self):
         """Called when teleop starts; optional"""
