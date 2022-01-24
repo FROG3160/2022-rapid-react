@@ -1,24 +1,38 @@
-from ctre import WPI_TalonFX, CANCoder, TalonFXInvertType, ControlMode
-from wpimath.geometry import Translation2d
-from wpimath.kinematics import SwerveDrive4Kinematics
+from ctre import (
+    FeedbackDevice,
+    WPI_TalonFX,
+    CANCoder,
+    TalonFXInvertType,
+    ControlMode,
+    SensorInitializationStrategy,
+    AbsoluteSensorRange,
+)
+from wpimath.geometry import Translation2d, Rotation2d
+from wpimath.kinematics import SwerveDrive4Kinematics, ChassisSpeeds
+import math
 
 
 # Motor Control modes
 VELOCITY_MODE = ControlMode.Velocity
 POSITION_MODE = ControlMode.MotionMagic
-trackwidth = 24
-wheelbase = 36
+# TODO: ensure we are using correct units
+kMaxFeetPerSec = 16.3  # taken from SDS specs for MK4i-L2
+# kMaxFeetPerSec = 18 # taken from SDS specks for MK4-L3
+# how quickly to rotate the robot
+kMaxRevolutionsPerSec = 2
+kMaxRadiansPerSec = kMaxRevolutionsPerSec * 2 * math.pi
 
 
 class SwerveModule:
     drive: WPI_TalonFX
     steer: WPI_TalonFX
     encoder: CANCoder
+    location: Translation2d
 
     def __init__(self):
         # set initial states for the component
         self.velocity = 0
-        # TODO set angle to sensed angle from CANCoder?
+        # TODO: set angle to sensed angle from CANCoder?
         self.angle = 0
         self.enabled = False
 
@@ -32,14 +46,37 @@ class SwerveModule:
         self.steer.enable()
         self.drive.enable()
 
+    def getAngle(self):
+        self.encoder.getAbsolutePosition()
+
     def setup(self):
         # magicbot calls setup() when creating components
         # configure motors and other objects here.
         # configure steer motor
         self.steer.setInverted(TalonFXInvertType.Clockwise)
+        # define a remote CANCoder as Remote Feedback 0
+        self.steer.configRemoteFeedbackFilter(self.encoder, 0)
+        # configure Falcon to use Remote Feedback 0
+        self.steer.configSelectedFeedbackSensor(FeedbackDevice.RemoteSensor0)
         # configure drive motor
-        self.steer.setInverted(TalonFXInvertType.Clockwise)
+        self.drive.setInverted(TalonFXInvertType.Clockwise)
         # configure CANcoder
+        # False = CCW rotation of magnet is positive
+        self.encoder.configSensorDirection(False)
+        # TODO: create variable and pass in from robot.py
+        self.encoder.configMagnetOffset(
+            0
+        )  
+        self.encoder.configSensorInitializationStrategy(
+            SensorInitializationStrategy.BootToAbsolutePosition
+        )
+        self.encoder.configAbsoluteSensorRange(
+            AbsoluteSensorRange.Signed_PlusMinus180
+        )
+
+    def setState(self, state):
+        # adjusts the speed and angle for minimal change
+        self.state = state.optimize(state, self.getAngle())
 
     def setAngle(self, angle):
         self.angle = angle
@@ -69,14 +106,9 @@ class SwerveChassis:
     swerveRearRight: SwerveModule
 
     def __init__(self):
-
-        self.kinematics = SwerveDrive4Kinematics(
-            Translation2d(trackwidth / 2, wheelbase / 2),
-            Translation2d(trackwidth / 2, -wheelbase / 2),
-            Translation2d(-trackwidth / 2, wheelbase / 2),
-            Translation2d(-trackwidth / 2, -wheelbase / 2),
-        )
         self.enabled = False
+        self.speeds = ChassisSpeeds(0, 0, 0)
+        self.center = Translation2d(0, 0)
 
     def disable(self):
         self.enabled = False
@@ -88,26 +120,60 @@ class SwerveChassis:
         ]:
             module.disable()
 
+    def drive(self, vX, vY, vT):
+        # takes values from the joystick and translates it
+        # into chassis movement
+        self.speeds = ChassisSpeeds(
+            vX * kMaxFeetPerSec, vY * kMaxFeetPerSec, vT * kMaxRadiansPerSec
+        )
+
     def enable(self):
         self.enabled = True
-        for module in [
-            self.swerveFrontLeft,
-            self.swerveFrontRight,
-            self.swerveRearLeft,
-            self.swerveRearRight,
-        ]:
+        for module in self.modules:
             module.enable()
 
     def setup(self):
         # magicbot calls setup() when creating components
         # configure motors and other objects here.
-        pass
+
+        # creating a list of our SwerveModules so they can
+        # always be used in the correct order.
+        self.modules = [
+            self.swerveFrontLeft,
+            self.swerveFrontRight,
+            self.swerveRearLeft,
+            self.swerveRearRight,
+        ]
+
+        self.kinematics = SwerveDrive4Kinematics(
+            # the splat operator (asterisk) below expands
+            # the list into positional arguments for the
+            # kinematics object.  We are taking the location
+            # property of each swerveModule object and passing
+            # it to SwerveDrive4Kinematics the order defined by
+            # self.modules above.  Order is critical here.
+            # We will receive back drive and steer values for
+            # each SwerveModule in the same order we use here.
+            *[m.location for m in self.modules]
+        )
 
     def execute(self):
         # execute is called each iteration
         # define what needs to happen if the
         # component is enabled/disabled
         if self.enabled:
-            pass
+            # pass in the commanded speeds and center of rotation
+            # and get back the speed and angle values for each module
+            module_states = self.kinematics.toSwerveModuleStates(
+                self.speeds, self.center
+            )
+            # normalizing wheel speeds so they don't exceed the
+            # maximum defined speed
+            module_states = self.kinematics.normalizeWheelSpeeds(
+                module_states, kMaxFeetPerSec
+            )
+            for module in self.modules:
+                module.setState(module_states.pop(0))
+
         else:
             pass
