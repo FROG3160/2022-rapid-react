@@ -18,6 +18,7 @@ POSITION_MODE = ControlMode.MotionMagic
 # TODO: ensure we are using correct units
 kMaxFeetPerSec = 16.3  # taken from SDS specs for MK4i-L2
 # kMaxFeetPerSec = 18 # taken from SDS specks for MK4-L3
+kMaxMetersPerSec = kMaxFeetPerSec * 0.3038
 # how quickly to rotate the robot
 kMaxRevolutionsPerSec = 2
 kMaxRadiansPerSec = kMaxRevolutionsPerSec * 2 * math.pi
@@ -76,7 +77,11 @@ class SwerveModule:
 
     def setState(self, state):
         # adjusts the speed and angle for minimal change
-        self.state = state.optimize(state, self.getAngle())
+        # requires getting the current angle from the steer
+        # motor and creating a Rotation2d object from it.
+        self.state = state.optimize(
+            state, Rotation2d.fromDegrees(self.getAngle())
+        )
 
     def setAngle(self, angle):
         self.angle = angle
@@ -124,7 +129,7 @@ class SwerveChassis:
         # takes values from the joystick and translates it
         # into chassis movement
         self.speeds = ChassisSpeeds(
-            vX * kMaxFeetPerSec, vY * kMaxFeetPerSec, vT * kMaxRadiansPerSec
+            vX * kMaxMetersPerSec, vY * kMaxMetersPerSec, vT * kMaxRadiansPerSec
         )
 
     def enable(self):
@@ -170,7 +175,7 @@ class SwerveChassis:
             # normalizing wheel speeds so they don't exceed the
             # maximum defined speed
             module_states = self.kinematics.normalizeWheelSpeeds(
-                module_states, kMaxFeetPerSec
+                module_states, kMaxMetersPerSec
             )
             for module in self.modules:
                 module.setState(module_states.pop(0))
