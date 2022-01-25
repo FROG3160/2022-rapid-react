@@ -10,7 +10,7 @@ from wpimath.geometry import Translation2d
 # we are specifying inches and dividing by 12 to get feet,
 # giving us values that can be used with the fromFeet method
 # to get a correct Translation2d object
-trackwidth = 27.75 / 12  #  feet between wheels side to side
+trackwidth = 27.75 / 12  # feet between wheels side to side
 wheelbase = 21.75 / 12  # feet between wheels front to back
 
 

@@ -1,11 +1,15 @@
 from ctre import (
     FeedbackDevice,
+    RemoteSensorSource,
     WPI_TalonFX,
     CANCoder,
     TalonFXInvertType,
     ControlMode,
     SensorInitializationStrategy,
     AbsoluteSensorRange,
+    TalonFXConfiguration,
+    CANCoderConfiguration,
+    BaseTalonPIDSetConfiguration,
 )
 from wpimath.geometry import Translation2d, Rotation2d
 from wpimath.kinematics import SwerveDrive4Kinematics, ChassisSpeeds
@@ -15,7 +19,6 @@ import math
 # Motor Control modes
 VELOCITY_MODE = ControlMode.Velocity
 POSITION_MODE = ControlMode.MotionMagic
-# TODO: ensure we are using correct units
 kMaxFeetPerSec = 16.3  # taken from SDS specs for MK4i-L2
 # kMaxFeetPerSec = 18 # taken from SDS specks for MK4-L3
 kMaxMetersPerSec = kMaxFeetPerSec * 0.3038
@@ -30,10 +33,39 @@ kTicksPerRotation = 2048
 # this multiplier will give us the velocity to give the TalonFX in ticks/100ms
 kVelocityMultiplier = kTicksPerRotation / (10 * kWheelDiameter * math.pi)
 
+# CANCoder base config
+# Offset will be different for each module and will need to be
+# set during SwerveModule.setup()
+cfgSteerEncoder = CANCoderConfiguration()
+cfgSteerEncoder.sensorDirection = False  # CCW spin of magnet is positive
+cfgSteerEncoder.initializationStrategy = (
+    SensorInitializationStrategy.BootToAbsolutePosition
+)
+cfgSteerEncoder.absoluteSensorRange = AbsoluteSensorRange.Signed_PlusMinus180
 
-# TODO: Incorprate PID configuration
-# steer PID: 0.2, 0.0, 0.2
-# drive PID:
+# Steer Motor base config
+# TODO: Tune and adjust PID
+cfgSteerMotor = TalonFXConfiguration()
+cfgSteerMotor.remoteFilter0.remoteSensorSource = RemoteSensorSource.CANCoder
+cfgSteerMotor.primaryPID(
+    BaseTalonPIDSetConfiguration(FeedbackDevice.RemoteSensor0)
+)
+cfgSteerMotor.slot0.kP = 0.2
+cfgSteerMotor.slot0.kI = 0.0
+cfgSteerMotor.slot0.kD = 0.2
+cfgSteerMotor.slot0.kF = 0.0
+
+# Drive Motor base config
+# TODO: Tune and adjust PID
+cfgDriveMotor = TalonFXConfiguration()
+cfgDriveMotor.initializationStrategy = SensorInitializationStrategy.BootToZero
+cfgDriveMotor.primaryPID(
+    BaseTalonPIDSetConfiguration(FeedbackDevice.IntegratedSensor)
+)
+cfgDriveMotor.slot0.kP = 0.0
+cfgDriveMotor.slot0.kI = 0.0
+cfgDriveMotor.slot0.kD = 0.0
+cfgDriveMotor.slot0.kF = 0.0
 
 
 class SwerveModule:
@@ -66,24 +98,27 @@ class SwerveModule:
         # magicbot calls setup() when creating components
         # configure motors and other objects here.
         # configure steer motor
-        self.steer.setInverted(TalonFXInvertType.Clockwise)
-        # define a remote CANCoder as Remote Feedback 0
-        self.steer.configRemoteFeedbackFilter(self.encoder, 0)
-        # configure Falcon to use Remote Feedback 0
-        self.steer.configSelectedFeedbackSensor(FeedbackDevice.RemoteSensor0)
-        # configure drive motor
-        self.drive.setInverted(TalonFXInvertType.Clockwise)
-        # configure CANcoder
-        # False = CCW rotation of magnet is positive
-        self.encoder.configSensorDirection(False)
+
         # TODO: create variable and pass in from robot.py
+        # configure CANCoder
+        self.encoder.configAllSettings(cfgSteerEncoder)
+        # TODO: Change 0 to variable that holds the offset
+        #     for each individual module
         self.encoder.configMagnetOffset(0)
-        self.encoder.configSensorInitializationStrategy(
-            SensorInitializationStrategy.BootToAbsolutePosition
-        )
-        self.encoder.configAbsoluteSensorRange(
-            AbsoluteSensorRange.Signed_PlusMinus180
-        )
+
+        self.steer.configAllSettings(cfgSteerMotor)
+        # define the remote CANCoder as Remote Feedback 0
+        self.steer.configRemoteFeedbackFilter(self.encoder.getDeviceNumber(), 0)
+        self.steer.setInverted(TalonFXInvertType.Clockwise)
+        # TODO: the following is now handled in the base config
+        #   with the ..primaryPID property.
+        #   - confirm this is the proper method
+        # configure Falcon to use Remote Feedback 0
+        # self.steer.configSelectedFeedbackSensor(FeedbackDevice.RemoteSensor0)
+
+        # configure drive motor
+        self.drive.configAllSettings(cfgDriveMotor)
+        self.drive.setInverted(TalonFXInvertType.Clockwise)
 
     def setState(self, state):
         # adjusts the speed and angle for minimal change
@@ -118,7 +153,7 @@ class SwerveModule:
 
 
 class SwerveChassis:
-
+    # TODO: Add gyro to chassis, needed for field-oriented movement
     swerveFrontLeft: SwerveModule
     swerveFrontRight: SwerveModule
     swerveRearLeft: SwerveModule
