@@ -226,11 +226,12 @@ class SwerveChassis:
             # normalizing wheel speeds so they don't exceed the
             # maximum defined speed and zipping with the module the
             # state belongs to.test
-            module_states = zip(self.modules, self.kinematics.normalizeWheelSpeeds(
-                states, kMaxMetersPerSec
-            ))
+            module_states = zip(
+                self.modules,
+                self.kinematics.normalizeWheelSpeeds(states, kMaxMetersPerSec),
+            )
             # send state to each associated module
-            for module, state in self.module_states:
+            for module, state in module_states:
                 module.setState(state)
 
         else:
