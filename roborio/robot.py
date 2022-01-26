@@ -58,10 +58,10 @@ class FROGbot(magicbot.MagicRobot):
             -trackwidth / 2, -wheelbase / 2
         )
 
-        self.swerveFrontLeft_steerOffset = 0
-        self.swerveFrontRight_steerOffset = 0
-        self.swerveRearLeft_steerOffset = 0
-        self.swerveRearRight_steerOffset = 0
+        self.swerveFrontLeft_steerOffset = 0.0
+        self.swerveFrontRight_steerOffset = 0.0
+        self.swerveRearLeft_steerOffset = 0.0
+        self.swerveRearRight_steerOffset = 0.0
 
     def teleopInit(self):
         """Called when teleop starts; optional"""
