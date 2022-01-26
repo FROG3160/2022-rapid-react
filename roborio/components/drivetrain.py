@@ -73,6 +73,7 @@ class SwerveModule:
     steer: WPI_TalonFX
     encoder: CANCoder
     location: Translation2d
+    steerOffset: float
 
     def __init__(self):
         # set initial states for the component
@@ -102,9 +103,8 @@ class SwerveModule:
         # TODO: create variable and pass in from robot.py
         # configure CANCoder
         self.encoder.configAllSettings(cfgSteerEncoder)
-        # TODO: Change 0 to variable that holds the offset
-        #     for each individual module
-        self.encoder.configMagnetOffset(0)
+        # adjust 0 degree point with offset
+        self.encoder.configMagnetOffset(self.steerOffset)
 
         self.steer.configAllSettings(cfgSteerMotor)
         # define the remote CANCoder as Remote Feedback 0
@@ -193,13 +193,12 @@ class SwerveChassis:
         # configure motors and other objects here.
 
         # creating a list of our SwerveModules so they can
-        # always be used in the correct order.
-        self.modules = [
+        self.modules = (
             self.swerveFrontLeft,
             self.swerveFrontRight,
             self.swerveRearLeft,
             self.swerveRearRight,
-        ]
+        )
 
         self.kinematics = SwerveDrive4Kinematics(
             # the splat operator (asterisk) below expands
@@ -221,16 +220,18 @@ class SwerveChassis:
             # pass in the commanded speeds and center of rotation
             # and get back the speed and angle values for each module
             # TODO: Change to field oriented
-            module_states = self.kinematics.toSwerveModuleStates(
+            states = self.kinematics.toSwerveModuleStates(
                 self.speeds, self.center
             )
             # normalizing wheel speeds so they don't exceed the
-            # maximum defined speed
-            module_states = self.kinematics.normalizeWheelSpeeds(
-                module_states, kMaxMetersPerSec
-            )
-            for module in self.modules:
-                module.setState(module_states.pop(0))
+            # maximum defined speed and zipping with the module the
+            # state belongs to.test
+            module_states = zip(self.modules, self.kinematics.normalizeWheelSpeeds(
+                states, kMaxMetersPerSec
+            ))
+            # send state to each associated module
+            for module, state in self.module_states:
+                module.setState(state)
 
         else:
             pass
