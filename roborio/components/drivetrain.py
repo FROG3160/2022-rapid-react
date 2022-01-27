@@ -15,7 +15,6 @@ from wpimath.geometry import Translation2d, Rotation2d
 from wpimath.kinematics import SwerveDrive4Kinematics, ChassisSpeeds
 import math
 
-
 # Motor Control modes
 VELOCITY_MODE = ControlMode.Velocity
 POSITION_MODE = ControlMode.MotionMagic
@@ -47,7 +46,7 @@ cfgSteerEncoder.absoluteSensorRange = AbsoluteSensorRange.Signed_PlusMinus180
 # TODO: Tune and adjust PID
 cfgSteerMotor = TalonFXConfiguration()
 cfgSteerMotor.remoteFilter0.remoteSensorSource = RemoteSensorSource.CANCoder
-cfgSteerMotor.primaryPID(
+cfgSteerMotor.primaryPID = (
     BaseTalonPIDSetConfiguration(FeedbackDevice.RemoteSensor0)
 )
 cfgSteerMotor.slot0.kP = 0.2
@@ -59,7 +58,7 @@ cfgSteerMotor.slot0.kF = 0.0
 # TODO: Tune and adjust PID
 cfgDriveMotor = TalonFXConfiguration()
 cfgDriveMotor.initializationStrategy = SensorInitializationStrategy.BootToZero
-cfgDriveMotor.primaryPID(
+cfgDriveMotor.primaryPID = (
     BaseTalonPIDSetConfiguration(FeedbackDevice.IntegratedSensor)
 )
 cfgDriveMotor.slot0.kP = 0.0
@@ -108,7 +107,9 @@ class SwerveModule:
 
         self.steer.configAllSettings(cfgSteerMotor)
         # define the remote CANCoder as Remote Feedback 0
-        self.steer.configRemoteFeedbackFilter(self.encoder.getDeviceNumber(), 0)
+        self.steer.configRemoteFeedbackFilter(
+            self.encoder.getDeviceNumber(), RemoteSensorSource.CANCoder, 0
+        )
         self.steer.setInverted(TalonFXInvertType.Clockwise)
         # TODO: the following is now handled in the base config
         #   with the ..primaryPID property.
