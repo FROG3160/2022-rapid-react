@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from ctre import CANCoder, WPI_TalonFX
+from ctre import WPI_CANCoder, WPI_TalonFX
 import magicbot
 import wpilib
 from components.drivetrain import SwerveModule, SwerveChassis
@@ -39,10 +39,10 @@ class FROGbot(magicbot.MagicRobot):
         self.swerveRearLeft_steer = WPI_TalonFX(23)
         self.swerveRearRight_steer = WPI_TalonFX(24)
         # Swerve steer encoders (canifier)
-        self.swerveFrontLeft_encoder = CANCoder(31)
-        self.swerveFrontRight_encoder = CANCoder(32)
-        self.swerveRearLeft_encoder = CANCoder(33)
-        self.swerveRearRight_encoder = CANCoder(34)
+        self.swerveFrontLeft_encoder = WPI_CANCoder(31)
+        self.swerveFrontRight_encoder = WPI_CANCoder(32)
+        self.swerveRearLeft_encoder = WPI_CANCoder(33)
+        self.swerveRearRight_encoder = WPI_CANCoder(34)
         # Swerve module locations
         # TODO: move to swerveChassis?
         self.swerveFrontLeft_location = Translation2d.fromFeet(
