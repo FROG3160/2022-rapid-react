@@ -2,7 +2,7 @@ from ctre import (
     FeedbackDevice,
     RemoteSensorSource,
     WPI_TalonFX,
-    CANCoder,
+    WPI_CANCoder,
     TalonFXInvertType,
     ControlMode,
     SensorInitializationStrategy,
@@ -70,7 +70,7 @@ cfgDriveMotor.slot0.kF = 0.0
 class SwerveModule:
     drive: WPI_TalonFX
     steer: WPI_TalonFX
-    encoder: CANCoder
+    encoder: WPI_CANCoder
     location: Translation2d
     steerOffset: float
 
