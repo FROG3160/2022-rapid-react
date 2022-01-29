@@ -1,5 +1,8 @@
+import wpilib 
+#  Resolve issue of magicbot not being defined
+from magicbot import feedback
+from ctre import CANifier
 from .common import Buffer
-from ctre import CANifier, FeedbackDevice, FeedbackDeviceRoutines
 
 BUFFERLEN = 50
 
@@ -27,16 +30,20 @@ class FROGdar:
             and self.targetRange is not None
         )
 
-
+    @feedback(key='sensor_raw') 
     def getSensorData(self):
         errorcode, (val1, val2) = self.pwm_sensor.getPWMInput(
             CANifier.PWMChannel.PWMChannel0
         )
         return val1
 
+    @feedback(key='sensor_buffered')
     def getBufferedSensorData(self):
         return self.targetRange
 
+       
+        
+    @feedback(key="range_inches")
     def getDistance(self):
         if self.isValidData():
             return self.getBufferedSensorData() * SENSORUNITS_IN_INCHES
