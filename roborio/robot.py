@@ -75,9 +75,9 @@ class FROGbot(magicbot.MagicRobot):
 
     def teleopPeriodic(self):
         """Called on each iteration of the control loop"""
-        vY, vX, vT = ( (self.driveStick.getY(), 0)[self.driveStick.GetY() < kDeadzone],
-            (self.driveStick.getX(), 0)[self.driveStick.GetX() < kDeadzone],
-            (self.driveStick.getTwist(), 0)[self.driveStick.GetTwist() < kDeadzone],
+        vY, vX, vT = ( (self.driveStick.getY(), 0)[self.driveStick.getY() < kDeadzone],
+            (self.driveStick.getX(), 0)[self.driveStick.getX() < kDeadzone],
+            (self.driveStick.getTwist(), 0)[self.driveStick.getTwist() < kDeadzone],
         )
         self.swerveChassis.drive(vX, vY, vT)
 
