@@ -61,9 +61,9 @@ cfgDriveMotor.initializationStrategy = SensorInitializationStrategy.BootToZero
 cfgDriveMotor.primaryPID = (
     BaseTalonPIDSetConfiguration(FeedbackDevice.IntegratedSensor)
 )
-cfgDriveMotor.slot0.kP = 0.0
+cfgDriveMotor.slot0.kP = 0.3
 cfgDriveMotor.slot0.kI = 0.0
-cfgDriveMotor.slot0.kD = 0.0
+cfgDriveMotor.slot0.kD = 0.4
 cfgDriveMotor.slot0.kF = 0.0
 
 
@@ -83,13 +83,9 @@ class SwerveModule:
 
     def disable(self):
         self.enabled = False
-        self.steer.disable()
-        self.drive.disable()
 
     def enable(self):
         self.enabled = True
-        self.steer.enable()
-        self.drive.enable()
 
     def getAngle(self):
         self.encoder.getAbsolutePosition()
@@ -126,7 +122,7 @@ class SwerveModule:
         # requires getting the current angle from the steer
         # motor and creating a Rotation2d object from it.
         self.state = state.optimize(
-            state, Rotation2d.fromDegrees(self.getAngle())
+            state, Rotation2d.fromDegrees(self.encoder.getAbsolutePosition())
         )
 
     def setAngle(self, angle):
@@ -229,7 +225,7 @@ class SwerveChassis:
             # state belongs to.test
             module_states = zip(
                 self.modules,
-                self.kinematics.normalizeWheelSpeeds(states, kMaxMetersPerSec),
+                self.kinematics.desaturateWheelSpeeds(states, kMaxMetersPerSec),
             )
             # send state to each associated module
             for module, state in module_states:
