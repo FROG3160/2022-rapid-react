@@ -14,7 +14,7 @@ from wpilib import Joystick
 trackwidth = 27.75 / 12  # feet between wheels side to side
 wheelbase = 21.75 / 12  # feet between wheels front to back
 
-kDeadzone = .2
+kDeadzone = 0.05
 
 
 class FROGbot(magicbot.MagicRobot):
@@ -75,9 +75,12 @@ class FROGbot(magicbot.MagicRobot):
 
     def teleopPeriodic(self):
         """Called on each iteration of the control loop"""
-        vY, vX, vT = ( (self.driveStick.getY(), 0)[self.driveStick.getY() < kDeadzone],
-            (self.driveStick.getX(), 0)[self.driveStick.getX() < kDeadzone],
-            (self.driveStick.getTwist(), 0)[self.driveStick.getTwist() < kDeadzone],
+        vX, vY, vT = (
+            -(self.driveStick.getY(), 0)[abs(self.driveStick.getY()) < kDeadzone],
+            -(self.driveStick.getX(), 0)[abs(self.driveStick.getX()) < kDeadzone],
+            -(self.driveStick.getRawAxis(3), 0)[
+                abs(self.driveStick.getRawAxis(3)) < kDeadzone
+            ],
         )
         self.swerveChassis.drive(vX, vY, vT)
 
