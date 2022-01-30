@@ -32,7 +32,7 @@ class PhysicsEngine:
     Simulates a 4-wheel robot using Tank Drive joystick control
     """
 
-    def __init__(self, physics_controller: PhysicsInterface):
+    def __init__(self, physics_controller: PhysicsInterface, robot: "FROGbot"):
         """
         :param physics_controller: `pyfrc.physics.core.Physics` object
                                    to communicate simulation effects to
@@ -40,8 +40,8 @@ class PhysicsEngine:
         """
 
         self.physics_controller = physics_controller
-        self.simBot = FROGbot()
-        self.simBot.createObjects()
+        self.robot = robot
+
 
 
         """
@@ -64,60 +64,37 @@ class PhysicsEngine:
             6 * units.inch,                     # wheel diameter
         )
         """
-        # Object creation sing wpilib.simulation.SimDeviceSim
-        # This was abandoned in favor of using CTRE's built in getSimCollection method
-        # below.
-        # values for Talon FX devices: (using .e.g. SimDeviceSim('CANMotor:Talon FX[11]').enumerateValues())
-        # [('percentOutput', True), ('motorOutputLeadVoltage', True), ('supplyCurrent', False), ('motorCurrent', False), ('busVoltage', False)]
+        # # Drive motors
+        # self.simFL_drive = self.simBot.swerveFrontLeft_drive.getSimCollection()
+        # self.simFR_drive = self.simBot.swerveFrontRight_drive.getSimCollection()
+        # self.simBL_drive = self.simBot.swerveRearLeft_drive.getSimCollection()
+        # self.simBR_drive = self.simBot.swerveRearRight_drive.getSimCollection()
+        
 
-        # self.frontLeft_drive = SimDeviceSim('CANMotor:Talon FX[11]/Integrated Sensor').getDouble('velocity')
-        # self.frontRight_drive = SimDeviceSim('CANMotor:Talon FX[12]/Integrated Sensor').getDouble('velocity')
-        # self.backLeft_drive = SimDeviceSim('CANMotor:Talon FX[13]/Integrated Sensor').getDouble('velocity')
-        # self.backRight_drive = SimDeviceSim('CANMotor:Talon FX[14]/Integrated Sensor').getDouble('velocity')
+        # # Steer motors
+        # self.simFL_steer = self.simBot.swerveFrontLeft_steer.getSimCollection()
+        # self.simFR_steer = self.simBot.swerveFrontRight_steer.getSimCollection()
+        # self.simBL_steer = self.simBot.swerveRearLeft_steer.getSimCollection()
+        # self.simBR_steer = self.simBot.swerveRearRight_steer.getSimCollection()
 
-        # self.frontLeft_steer = SimDeviceSim('CANMotor:Talon FX[21]').getDouble('percentOutput')
-        # self.frontRight_steer = SimDeviceSim('CANMotor:Talon FX[22]').getDouble('percentOutput')
-        # self.backLeft_steer = SimDeviceSim('CANMotor:Talon FX[23]').getDouble('percentOutput')
-        # self.backRight_steer = SimDeviceSim('CANMotor:Talon FX[24]').getDouble('percentOutput')
+        # self.simFL_encoder = (
+        #     self.simBot.swerveFrontLeft_encoder.getSimCollection()
+        # )
+        # self.simFR_encoder = (
+        #     self.simBot.swerveFrontRight_encoder.getSimCollection()
+        # )
+        # self.simBL_encoder = (
+        #     self.simBot.swerveRearLeft_encoder.getSimCollection()
+        # )
+        # self.simBR_encoder = (
+        #     self.simBot.swerveRearRight_encoder.getSimCollection()
+        # )
 
-        # self.frontLeft_encoder = SimDeviceSim('CANMotor:Talon FX[31]').getDouble('absolutePosition')
-        # self.frontRight_encoder = SimDeviceSim('CANMotor:Talon FX[32]').getDouble('absolutePosition')
-        # self.backLeft_encoder = SimDeviceSim('CANMotor:Talon FX[33]').getDouble('absolutePosition')
-        # self.backRight_encoder = SimDeviceSim('CANMotor:Talon FX[34]').getDouble('absolutePosition')
-
-        # it seems that using getSimCollection allows us to use the CTRE objects in a similar
-        # way to the main code, so we are trying this approach over using the SimDevicesSim
-        # objects from wpilib.simulation
-        # Drive motors
-        self.simFL_drive = self.simBot.swerveFrontLeft_drive.getSimCollection()
-        self.simFR_drive = self.simBot.swerveFrontRight_drive.getSimCollection()
-        self.simBL_drive = self.simBot.swerveRearLeft_drive.getSimCollection()
-        self.simBR_drive = self.simBot.swerveRearRight_drive.getSimCollection()
-
-        # Steer motors
-        self.simFL_steer = self.simBot.swerveFrontLeft_steer.getSimCollection()
-        self.simFR_steer = self.simBot.swerveFrontRight_steer.getSimCollection()
-        self.simBL_steer = self.simBot.swerveRearLeft_steer.getSimCollection()
-        self.simBR_steer = self.simBot.swerveRearRight_steer.getSimCollection()
-
-        self.simFL_encoder = (
-            self.simBot.swerveFrontLeft_encoder.getSimCollection()
-        )
-        self.simFR_encoder = (
-            self.simBot.swerveFrontRight_encoder.getSimCollection()
-        )
-        self.simBL_encoder = (
-            self.simBot.swerveRearLeft_encoder.getSimCollection()
-        )
-        self.simBR_encoder = (
-            self.simBot.swerveRearRight_encoder.getSimCollection()
-        )
-
-        # initializing the CANCoder. All wheels are forward to start
-        self.simFL_encoder.setRawPosition(0)
-        self.simFR_encoder.setRawPosition(0)
-        self.simBL_encoder.setRawPosition(0)
-        self.simBR_encoder.setRawPosition(0)
+        # # initializing the CANCoder. All wheels are forward to start
+        # self.simFL_encoder.setRawPosition(0)
+        # self.simFR_encoder.setRawPosition(0)
+        # self.simBL_encoder.setRawPosition(0)
+        # self.simBR_encoder.setRawPosition(0)
 
     def update_sim(self, now, tm_diff):
         """
@@ -167,5 +144,6 @@ class PhysicsEngine:
         # self.physics_controller.drive(*chassis_speeds)
 
         # this works to update a motor in the sim GUI, but only changing the percentOutput and motorOutputLeadVoltage attributes.
-        self.simFL_drive.setIntegratedSensorVelocity(round(self.simBot.swerveFrontLeft_drive.getSelectedSensorVelocity()))
+        #self.simFL_drive.setIntegratedSensorVelocity(round(self.simBot.swerveFrontLeft_drive.getSelectedSensorVelocity()))
+        self.physics_controller.drive(self.robot.swerveChassis.speeds, tm_diff)
         pass
