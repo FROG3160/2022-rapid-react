@@ -15,9 +15,11 @@
 import wpilib.simulation
 
 from pyfrc.physics.core import PhysicsInterface
-from pyfrc.physics import motor_cfgs, tankmodel
 from pyfrc.physics.units import units
 from wpilib.simulation import SimDeviceSim
+from pyfrc.physics.units import units
+from pyfrc.physics.drivetrains import four_motor_swerve_drivetrain
+from components.drivetrain import kVelocityMultiplier
 
 # import typing
 
@@ -41,7 +43,6 @@ class PhysicsEngine:
         self.simBot = FROGbot()
         self.simBot.createObjects()
 
-        print("TODO: modify simulation for my robot")
 
         """
         # Change these parameters to fit your robot!
@@ -136,3 +137,35 @@ class PhysicsEngine:
         transform = self.drivetrain.calculate(l_motor, r_motor, tm_diff)
         pose = self.physics_controller.move_robot(transform)
         """
+
+        
+        '''
+        (function) four_motor_swerve_drivetrain: (lr_motor: float, rr_motor: float, lf_motor: float, rf_motor: float, lr_angle: float, rr_angle: float, lf_angle: float, rf_angle: float, x_wheelbase=2, y_wheelbase=2, speed=5, deadzone=None) -> ChassisSpeeds
+        Four motors that can be rotated in any direction
+
+        If any motors are inverted, then you will need to multiply that motor's value by -1.
+
+        :param lr_motor: Left rear motor value (-1 to 1); 1 is forward
+        :param rr_motor: Right rear motor value (-1 to 1); 1 is forward
+        :param lf_motor: Left front motor value (-1 to 1); 1 is forward
+        :param rf_motor: Right front motor value (-1 to 1); 1 is forward
+
+        :param lr_angle: Left rear motor angle in degrees (0 to 360 measured clockwise from forward position)
+        :param rr_angle: Right rear motor angle in degrees (0 to 360 measured clockwise from forward position)
+        :param lf_angle: Left front motor angle in degrees (0 to 360 measured clockwise from forward position)
+        :param rf_angle: Right front motor angle in degrees (0 to 360 measured clockwise from forward position)
+
+        :param x_wheelbase: The distance in feet between right and left wheels.
+        :param y_wheelbase: The distance in feet between forward and rear wheels.
+        :param speed: Speed of robot in feet per second (see above)
+        :param deadzone: A function that adjusts the output of the motor (see linear_deadzone)
+
+        :returns: ChassisSpeeds that can be passed to 'drive'
+        '''
+        # TODO: calculate all speeds and angles and pass them to four_motor_swerve_drivetrain()
+        # chassis_speeds = four_motor_swerve_drivetrain()
+        # self.physics_controller.drive(*chassis_speeds)
+
+        # this works to update a motor in the sim GUI, but only changing the percentOutput and motorOutputLeadVoltage attributes.
+        self.simFL_drive.setIntegratedSensorVelocity(round(self.simBot.swerveFrontLeft_drive.getSelectedSensorVelocity()))
+        pass
