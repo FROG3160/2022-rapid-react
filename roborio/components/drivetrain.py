@@ -1,3 +1,4 @@
+from re import S
 from ctre import (
     FeedbackDevice,
     RemoteSensorSource,
@@ -12,8 +13,9 @@ from ctre import (
     BaseTalonPIDSetConfiguration,
 )
 from wpimath.geometry import Translation2d, Rotation2d
-from wpimath.kinematics import SwerveDrive4Kinematics, ChassisSpeeds
+from wpimath.kinematics import SwerveDrive4Kinematics, ChassisSpeeds,SwerveModuleState
 import math
+from magicbot import feedback
 
 # Motor Control modes
 VELOCITY_MODE = ControlMode.Velocity
@@ -80,22 +82,40 @@ class SwerveModule:
         # TODO: set angle to sensed angle from CANCoder?
         self.angle = 0
         self.enabled = False
+        self.state = SwerveModuleState(0, Rotation2d.fromDegrees(0))
 
     def disable(self):
         self.enabled = False
 
+    @feedback
     def enable(self):
         self.enabled = True
 
+    @feedback()
     def getAngle(self):
         self.encoder.getAbsolutePosition()
+
+    @feedback()
+    def getStateFPS(self):
+        return self.state.speed_fps
+
+    @feedback()
+    def getStateSpeed(self):
+        return self.state.speed
+
+    @feedback()
+    def getStateDegrees(self):
+        return self.state.angle.degrees()
+
+    @feedback()
+    def getStateRadians(self):
+        return self.state.angle.radians()
 
     def setup(self):
         # magicbot calls setup() when creating components
         # configure motors and other objects here.
         # configure steer motor
 
-        # TODO: create variable and pass in from robot.py
         # configure CANCoder
         self.encoder.configAllSettings(cfgSteerEncoder)
         # adjust 0 degree point with offset
@@ -124,12 +144,6 @@ class SwerveModule:
         self.state = state.optimize(
             state, Rotation2d.fromDegrees(self.encoder.getAbsolutePosition())
         )
-
-    def setAngle(self, angle):
-        self.angle = angle
-
-    def setVelocity(self, velocity):
-        self.velocity = velocity
 
     def execute(self):
         # execute is called each iteration
@@ -184,6 +198,18 @@ class SwerveChassis:
         self.enabled = True
         for module in self.modules:
             module.enable()
+
+    @feedback()
+    def getChassisX_FPS(self):
+        return self.speeds.vx_fps
+
+    @feedback()
+    def getChassisY_FPS(self):
+        return self.speeds.vy_fps
+
+    @feedback()
+    def getChassisT_DPS(self):
+        return self.speeds.omega_dps
 
     def setup(self):
         # magicbot calls setup() when creating components
