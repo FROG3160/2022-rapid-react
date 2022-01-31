@@ -49,22 +49,18 @@ class FROGbot(magicbot.MagicRobot):
         # Swerve module locations
         # TODO: move to swerveChassis?
         self.swerveFrontLeft_location = Translation2d.fromFeet(
-            # trackwidth / 2, wheelbase / 2
             wheelbase / 2,
             trackwidth / 2,
         )
         self.swerveFrontRight_location = Translation2d.fromFeet(
-            # trackwidth / 2, -wheelbase / 2
             wheelbase / 2,
             -trackwidth / 2,
         )
         self.swerveRearLeft_location = Translation2d.fromFeet(
-            # -trackwidth / 2, wheelbase / 2
             -wheelbase / 2,
             trackwidth / 2,
         )
         self.swerveRearRight_location = Translation2d.fromFeet(
-            # -trackwidth / 2, -wheelbase / 2
             -wheelbase / 2,
             -trackwidth / 2,
         )
