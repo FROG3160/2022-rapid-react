@@ -107,10 +107,18 @@ class SwerveModule:
     def getStateSpeed(self):
         return self.state.speed
 
+    #TODO: Determine which way we want these 
+    # to read.  Right now they are inverted
+    # to visually show positive angles to the
+    # right (clockwise) to match the smartdashboard
     @feedback()
     def getStateDegrees(self):
         return -self.state.angle.degrees()
 
+    #TODO: Determine which way we want these 
+    # to read.  Right now they are inverted
+    # to visually show positive angles to the
+    # right (clockwise) to match the smartdashboard
     @feedback()
     def getStateRadians(self):
         return -self.state.angle.radians()
@@ -154,7 +162,10 @@ class SwerveModule:
         # define what needs to happen if the
         # component is enabled/disabled
         if self.enabled:
-            # TODO: confirm correct units for position mode
+            # TODO: confirm correct units for position mode,
+            # and determine if the value needs to be inverted or not
+            # since the angle coming from the SwerveModuleState is
+            # positive to the left (counter-clockwise)
             self.steer.set(POSITION_MODE, self.state.angle.degrees())
             # set velocity for Falcon to ticks/100ms
             self.drive.set(
