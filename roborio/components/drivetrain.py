@@ -13,7 +13,11 @@ from ctre import (
     BaseTalonPIDSetConfiguration,
 )
 from wpimath.geometry import Translation2d, Rotation2d
-from wpimath.kinematics import SwerveDrive4Kinematics, ChassisSpeeds,SwerveModuleState
+from wpimath.kinematics import (
+    SwerveDrive4Kinematics,
+    ChassisSpeeds,
+    SwerveModuleState,
+)
 import math
 from magicbot import feedback
 
@@ -48,8 +52,8 @@ cfgSteerEncoder.absoluteSensorRange = AbsoluteSensorRange.Signed_PlusMinus180
 # TODO: Tune and adjust PID
 cfgSteerMotor = TalonFXConfiguration()
 cfgSteerMotor.remoteFilter0.remoteSensorSource = RemoteSensorSource.CANCoder
-cfgSteerMotor.primaryPID = (
-    BaseTalonPIDSetConfiguration(FeedbackDevice.RemoteSensor0)
+cfgSteerMotor.primaryPID = BaseTalonPIDSetConfiguration(
+    FeedbackDevice.RemoteSensor0
 )
 cfgSteerMotor.slot0.kP = 0.2
 cfgSteerMotor.slot0.kI = 0.0
@@ -60,8 +64,8 @@ cfgSteerMotor.slot0.kF = 0.0
 # TODO: Tune and adjust PID
 cfgDriveMotor = TalonFXConfiguration()
 cfgDriveMotor.initializationStrategy = SensorInitializationStrategy.BootToZero
-cfgDriveMotor.primaryPID = (
-    BaseTalonPIDSetConfiguration(FeedbackDevice.IntegratedSensor)
+cfgDriveMotor.primaryPID = BaseTalonPIDSetConfiguration(
+    FeedbackDevice.IntegratedSensor
 )
 cfgDriveMotor.slot0.kP = 0.3
 cfgDriveMotor.slot0.kI = 0.0
@@ -105,11 +109,11 @@ class SwerveModule:
 
     @feedback()
     def getStateDegrees(self):
-        return self.state.angle.degrees()
+        return -self.state.angle.degrees()
 
     @feedback()
     def getStateRadians(self):
-        return self.state.angle.radians()
+        return -self.state.angle.radians()
 
     def setup(self):
         # magicbot calls setup() when creating components
@@ -189,9 +193,7 @@ class SwerveChassis:
         # takes values from the joystick and translates it
         # into chassis movement
         self.speeds = ChassisSpeeds(
-            vX * kMaxMetersPerSec,
-            vY * kMaxMetersPerSec,
-            vT * kMaxRadiansPerSec
+            vX * kMaxMetersPerSec, vY * kMaxMetersPerSec, vT * kMaxRadiansPerSec
         )
 
     def enable(self):
