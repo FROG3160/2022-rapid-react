@@ -49,16 +49,24 @@ class FROGbot(magicbot.MagicRobot):
         # Swerve module locations
         # TODO: move to swerveChassis?
         self.swerveFrontLeft_location = Translation2d.fromFeet(
-            trackwidth / 2, wheelbase / 2
+            # trackwidth / 2, wheelbase / 2
+            wheelbase / 2,
+            trackwidth / 2,
         )
         self.swerveFrontRight_location = Translation2d.fromFeet(
-            trackwidth / 2, -wheelbase / 2
+            # trackwidth / 2, -wheelbase / 2
+            wheelbase / 2,
+            -trackwidth / 2,
         )
         self.swerveRearLeft_location = Translation2d.fromFeet(
-            -trackwidth / 2, wheelbase / 2
+            # -trackwidth / 2, wheelbase / 2
+            -wheelbase / 2,
+            trackwidth / 2,
         )
         self.swerveRearRight_location = Translation2d.fromFeet(
-            -trackwidth / 2, -wheelbase / 2
+            # -trackwidth / 2, -wheelbase / 2
+            -wheelbase / 2,
+            -trackwidth / 2,
         )
 
         self.swerveFrontLeft_steerOffset = 0.0
@@ -76,8 +84,12 @@ class FROGbot(magicbot.MagicRobot):
     def teleopPeriodic(self):
         """Called on each iteration of the control loop"""
         vX, vY, vT = (
-            -(self.driveStick.getY(), 0)[abs(self.driveStick.getY()) < kDeadzone],
-            -(self.driveStick.getX(), 0)[abs(self.driveStick.getX()) < kDeadzone],
+            -(self.driveStick.getY(), 0)[
+                abs(self.driveStick.getY()) < kDeadzone
+            ],
+            -(self.driveStick.getX(), 0)[
+                abs(self.driveStick.getX()) < kDeadzone
+            ],
             -(self.driveStick.getRawAxis(3), 0)[
                 abs(self.driveStick.getRawAxis(3)) < kDeadzone
             ],
