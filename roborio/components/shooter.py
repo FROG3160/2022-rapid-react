@@ -6,45 +6,18 @@ from ctre import (
     ControlMode, 
     NeutralMode, 
     TalonFXInvertType)
-# from .common import TalonPID
-# TODO Refine and 
+from .common import TalonPID
 
 # TODO Find out the Min/Max of the velocity and the tolerence for the Flywheel
 FLYWHEEL_MODE = ControlMode.Velocity
-FLYWHEEL_PID = self.TalonPID(0, p=0.4, f=0.0515)
+FLYWHEEL_PID = TalonPID(0, p=0.4, f=0.0515)
 FLYWHEEL_VELOCITY = 7300
 FLYWHEEL_MAX_VEL = 25000
 FLYWHEEL_MAX_ACCEL = (FLYWHEEL_MAX_VEL / 50)
 FLYWHEEL_MAX_DECEL = -FLYWHEEL_MAX_ACCEL
 FLYWHEEL_INCREMENT = 500
-
-class TalonPID:
-    """Class that holds contants for PID controls"""
-
-    # TODO: Add methods to apply to motor?
-
-    def __init__(
-        self,
-        slot: int = 0,
-        p: float = 0,
-        i: float = 0,
-        d: float = 0,
-        f: float = 0,
-        iZone: float = 0,
-    ):
-        self.slot = slot
-        self.p = p
-        self.i = i
-        self.d = d
-        self.f = f
-        self.iZone = iZone
-
-    def configTalon(self, motor_control):
-        motor_control.config_kP(self.slot, self.p, 0)
-        motor_control.config_kI(self.slot, self.i, 0)
-        motor_control.config_kD(self.slot, self.d, 0)
-        motor_control.config_kF(self.slot, self.f, 0)
-        motor_control.config_IntegralZone(self.slot, self.iZone, 0)
+FLYWHEEL_VEL_TOLERANCE = 300
+FLYWHEEL_LOOP_RAMP = 0.25
 
 class Flywheel:
     flywheel_motor_top: WPI_TalonFX
@@ -61,7 +34,33 @@ class Flywheel:
         self.enabled = True
 
     def setup(self):
-        
+        # Falcon500 motors use the integrated sensor
+        self.flywheel_motor_top.configSelectedFeedbackSensor(
+            FeedbackDevice.IntegratedSensor, 0, 0
+        )
+        self.flywheel_motor_bottom.configSelectedFeedbackSensor(
+            FeedbackDevice.IntegratedSensor, 0, 0
+        )
+        self.flywheel_motor_top.setSensorPhase(False)
+        self.flywheel_motor_bottom.setSensorPhase(False)
+        # = setInverted(True)
+        self.flywheel_motor_top.setInverted(
+            TalonFXInvertType.CounterClockwise)
+        self.flywheel_motor_bottom.setInverted(
+            TalonFXInvertType.Clockwise)
+        self.flywheel_motor_top.setNeutralMode(
+            NeutralMode.Coast)
+        self.flywheel_motor_bottom.setNeutralMode(
+            NeutralMode.Coast)
+        FLYWHEEL_PID.configTalon(
+            self.flywheel_motor_top)
+        FLYWHEEL_PID.configTalon(
+            self.flywheel_motor_bottom)
+        # use closed loop ramp to accelerate smoothly
+        self.flywheel_motor_top.configClosedloopRamp(
+            FLYWHEEL_LOOP_RAMP)
+        self.flywheel_motor_bottom.configClosedloopRamp(
+            FLYWHEEL_LOOP_RAMP)
 
     def execute(self):
         if self.enabled:
