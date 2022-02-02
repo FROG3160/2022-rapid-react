@@ -182,8 +182,8 @@ class SwerveChassis:
     # TODO: Add gyro to chassis, needed for field-oriented movement
     swerveFrontLeft: SwerveModule
     swerveFrontRight: SwerveModule
-    swerveRearLeft: SwerveModule
-    swerveRearRight: SwerveModule
+    swerveBackLeft: SwerveModule
+    swerveBackRight: SwerveModule
 
     def __init__(self):
         self.enabled = False
@@ -195,8 +195,8 @@ class SwerveChassis:
         for module in [
             self.swerveFrontLeft,
             self.swerveFrontRight,
-            self.swerveRearLeft,
-            self.swerveRearRight,
+            self.swerveBackLeft,
+            self.swerveBackRight,
         ]:
             module.disable()
 
@@ -232,8 +232,8 @@ class SwerveChassis:
         self.modules = (
             self.swerveFrontLeft,
             self.swerveFrontRight,
-            self.swerveRearLeft,
-            self.swerveRearRight,
+            self.swerveBackLeft,
+            self.swerveBackRight,
         )
 
         self.kinematics = SwerveDrive4Kinematics(

@@ -26,26 +26,26 @@ class FROGbot(magicbot.MagicRobot):
 
     swerveFrontLeft: SwerveModule
     swerveFrontRight: SwerveModule
-    swerveRearLeft: SwerveModule
-    swerveRearRight: SwerveModule
+    swerveBackLeft: SwerveModule
+    swerveBackRight: SwerveModule
 
     def createObjects(self):
         """Create motors and inputs"""
         # Swerve drive motors
         self.swerveFrontLeft_drive = WPI_TalonFX(11)
         self.swerveFrontRight_drive = WPI_TalonFX(12)
-        self.swerveRearLeft_drive = WPI_TalonFX(13)
-        self.swerveRearRight_drive = WPI_TalonFX(14)
+        self.swerveBackLeft_drive = WPI_TalonFX(13)
+        self.swerveBackRight_drive = WPI_TalonFX(14)
         # Swerve steer motors
         self.swerveFrontLeft_steer = WPI_TalonFX(21)
         self.swerveFrontRight_steer = WPI_TalonFX(22)
-        self.swerveRearLeft_steer = WPI_TalonFX(23)
-        self.swerveRearRight_steer = WPI_TalonFX(24)
+        self.swerveBackLeft_steer = WPI_TalonFX(23)
+        self.swerveBackRight_steer = WPI_TalonFX(24)
         # Swerve steer encoders (canifier)
         self.swerveFrontLeft_encoder = WPI_CANCoder(31)
         self.swerveFrontRight_encoder = WPI_CANCoder(32)
-        self.swerveRearLeft_encoder = WPI_CANCoder(33)
-        self.swerveRearRight_encoder = WPI_CANCoder(34)
+        self.swerveBackLeft_encoder = WPI_CANCoder(33)
+        self.swerveBackRight_encoder = WPI_CANCoder(34)
         # Swerve module locations
         # TODO: move to swerveChassis?
         self.swerveFrontLeft_location = Translation2d.fromFeet(
@@ -56,19 +56,19 @@ class FROGbot(magicbot.MagicRobot):
             wheelbase / 2,
             -trackwidth / 2,
         )
-        self.swerveRearLeft_location = Translation2d.fromFeet(
+        self.swerveBackLeft_location = Translation2d.fromFeet(
             -wheelbase / 2,
             trackwidth / 2,
         )
-        self.swerveRearRight_location = Translation2d.fromFeet(
+        self.swerveBackRight_location = Translation2d.fromFeet(
             -wheelbase / 2,
             -trackwidth / 2,
         )
 
         self.swerveFrontLeft_steerOffset = 0.0
         self.swerveFrontRight_steerOffset = 0.0
-        self.swerveRearLeft_steerOffset = 0.0
-        self.swerveRearRight_steerOffset = 0.0
+        self.swerveBackLeft_steerOffset = 0.0
+        self.swerveBackRight_steerOffset = 0.0
 
         self.driveStick = Joystick(0)
 
