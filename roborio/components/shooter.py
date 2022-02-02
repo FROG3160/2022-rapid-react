@@ -7,6 +7,7 @@ from ctre import (
     NeutralMode, 
     TalonFXInvertType)
 from .common import TalonPID
+from magicbot import feedback
 
 # TODO Find out the Min/Max of the velocity and the tolerence for the Flywheel
 FLYWHEEL_MODE = ControlMode.Velocity
@@ -26,12 +27,32 @@ class Flywheel:
     def __init__(self):
         self.enabled = False
         self._controlMode = FLYWHEEL_MODE
+        self._velocity = FLYWHEEL_VELOCITY
 
     def disable(self):
         self.enabled = False
 
     def enable(self):
         self.enabled = True
+    
+    @feedback(key="isReady")
+    def isReady(self):
+        return abs(self.getVelocity() - self.getCommandedVelocity()) < FLYWHEEL_VEL_TOLERANCE
+
+    # read current encoder velocity
+    @feedback(key="velocity")
+    def getVelocity(self):
+        #sensor values are reversed.  we command a positive value and the
+        #sensor shows a negative one, so we negate the output
+        return (-self.flywheel_motor_top.getSelectedSensorVelocity(
+            FeedbackDevice.IntegratedSensor),
+         -self.flywheel_motor_bottom.getSelectedSensorVelocity(
+            FeedbackDevice.IntegratedSensor
+        ))
+
+    @feedback(key="commanded")
+    def getCommandedVelocity(self):
+        return self._velocity
 
     def setup(self):
         # Falcon500 motors use the integrated sensor
@@ -61,6 +82,18 @@ class Flywheel:
             FLYWHEEL_LOOP_RAMP)
         self.flywheel_motor_bottom.configClosedloopRamp(
             FLYWHEEL_LOOP_RAMP)
+
+    def setVelocity(self, velocity):
+        self._controlMode = ControlMode.Velocity
+        self._velocity = velocity
+
+    def incrementSpeed(self):
+        self._velocity += FLYWHEEL_INCREMENT
+        self.setVelocity(self._velocity)
+
+    def decrementSpeed(self):
+        self._velocity -= FLYWHEEL_INCREMENT
+        self.setVelocity(self._velocity)
 
     def execute(self):
         if self.enabled:
