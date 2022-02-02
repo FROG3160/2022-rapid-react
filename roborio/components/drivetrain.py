@@ -1,8 +1,9 @@
+from re import S
 from ctre import (
     FeedbackDevice,
     RemoteSensorSource,
     WPI_TalonFX,
-    CANCoder,
+    WPI_CANCoder,
     TalonFXInvertType,
     ControlMode,
     SensorInitializationStrategy,
@@ -12,8 +13,13 @@ from ctre import (
     BaseTalonPIDSetConfiguration,
 )
 from wpimath.geometry import Translation2d, Rotation2d
-from wpimath.kinematics import SwerveDrive4Kinematics, ChassisSpeeds
+from wpimath.kinematics import (
+    SwerveDrive4Kinematics,
+    ChassisSpeeds,
+    SwerveModuleState,
+)
 import math
+from magicbot import feedback
 
 # Motor Control modes
 VELOCITY_MODE = ControlMode.Velocity
@@ -46,8 +52,8 @@ cfgSteerEncoder.absoluteSensorRange = AbsoluteSensorRange.Signed_PlusMinus180
 # TODO: Tune and adjust PID
 cfgSteerMotor = TalonFXConfiguration()
 cfgSteerMotor.remoteFilter0.remoteSensorSource = RemoteSensorSource.CANCoder
-cfgSteerMotor.primaryPID = (
-    BaseTalonPIDSetConfiguration(FeedbackDevice.RemoteSensor0)
+cfgSteerMotor.primaryPID = BaseTalonPIDSetConfiguration(
+    FeedbackDevice.RemoteSensor0
 )
 cfgSteerMotor.slot0.kP = 0.2
 cfgSteerMotor.slot0.kI = 0.0
@@ -58,19 +64,19 @@ cfgSteerMotor.slot0.kF = 0.0
 # TODO: Tune and adjust PID
 cfgDriveMotor = TalonFXConfiguration()
 cfgDriveMotor.initializationStrategy = SensorInitializationStrategy.BootToZero
-cfgDriveMotor.primaryPID = (
-    BaseTalonPIDSetConfiguration(FeedbackDevice.IntegratedSensor)
+cfgDriveMotor.primaryPID = BaseTalonPIDSetConfiguration(
+    FeedbackDevice.IntegratedSensor
 )
-cfgDriveMotor.slot0.kP = 0.0
+cfgDriveMotor.slot0.kP = 0.3
 cfgDriveMotor.slot0.kI = 0.0
-cfgDriveMotor.slot0.kD = 0.0
+cfgDriveMotor.slot0.kD = 0.4
 cfgDriveMotor.slot0.kF = 0.0
 
 
 class SwerveModule:
     drive: WPI_TalonFX
     steer: WPI_TalonFX
-    encoder: CANCoder
+    encoder: WPI_CANCoder
     location: Translation2d
     steerOffset: float
 
@@ -80,26 +86,48 @@ class SwerveModule:
         # TODO: set angle to sensed angle from CANCoder?
         self.angle = 0
         self.enabled = False
+        self.state = SwerveModuleState(0, Rotation2d.fromDegrees(0))
 
     def disable(self):
         self.enabled = False
-        self.steer.disable()
-        self.drive.disable()
 
+    @feedback
     def enable(self):
         self.enabled = True
-        self.steer.enable()
-        self.drive.enable()
 
+    @feedback()
     def getAngle(self):
         self.encoder.getAbsolutePosition()
+
+    @feedback()
+    def getStateFPS(self):
+        return self.state.speed_fps
+
+    @feedback()
+    def getStateSpeed(self):
+        return self.state.speed
+
+    #TODO: Determine which way we want these 
+    # to read.  Right now they are inverted
+    # to visually show positive angles to the
+    # right (clockwise) to match the smartdashboard
+    @feedback()
+    def getStateDegrees(self):
+        return -self.state.angle.degrees()
+
+    #TODO: Determine which way we want these 
+    # to read.  Right now they are inverted
+    # to visually show positive angles to the
+    # right (clockwise) to match the smartdashboard
+    @feedback()
+    def getStateRadians(self):
+        return -self.state.angle.radians()
 
     def setup(self):
         # magicbot calls setup() when creating components
         # configure motors and other objects here.
         # configure steer motor
 
-        # TODO: create variable and pass in from robot.py
         # configure CANCoder
         self.encoder.configAllSettings(cfgSteerEncoder)
         # adjust 0 degree point with offset
@@ -126,21 +154,18 @@ class SwerveModule:
         # requires getting the current angle from the steer
         # motor and creating a Rotation2d object from it.
         self.state = state.optimize(
-            state, Rotation2d.fromDegrees(self.getAngle())
+            state, Rotation2d.fromDegrees(self.encoder.getAbsolutePosition())
         )
-
-    def setAngle(self, angle):
-        self.angle = angle
-
-    def setVelocity(self, velocity):
-        self.velocity = velocity
 
     def execute(self):
         # execute is called each iteration
         # define what needs to happen if the
         # component is enabled/disabled
         if self.enabled:
-            # TODO: confirm correct units for position mode
+            # TODO: confirm correct units for position mode,
+            # and determine if the value needs to be inverted or not
+            # since the angle coming from the SwerveModuleState is
+            # positive to the left (counter-clockwise)
             self.steer.set(POSITION_MODE, self.state.angle.degrees())
             # set velocity for Falcon to ticks/100ms
             self.drive.set(
@@ -157,8 +182,8 @@ class SwerveChassis:
     # TODO: Add gyro to chassis, needed for field-oriented movement
     swerveFrontLeft: SwerveModule
     swerveFrontRight: SwerveModule
-    swerveRearLeft: SwerveModule
-    swerveRearRight: SwerveModule
+    swerveBackLeft: SwerveModule
+    swerveBackRight: SwerveModule
 
     def __init__(self):
         self.enabled = False
@@ -170,8 +195,8 @@ class SwerveChassis:
         for module in [
             self.swerveFrontLeft,
             self.swerveFrontRight,
-            self.swerveRearLeft,
-            self.swerveRearRight,
+            self.swerveBackLeft,
+            self.swerveBackRight,
         ]:
             module.disable()
 
@@ -179,15 +204,25 @@ class SwerveChassis:
         # takes values from the joystick and translates it
         # into chassis movement
         self.speeds = ChassisSpeeds(
-            vX * kMaxMetersPerSec,
-            vY * kMaxMetersPerSec,
-            vT * kMaxRadiansPerSec
+            vX * kMaxMetersPerSec, vY * kMaxMetersPerSec, vT * kMaxRadiansPerSec
         )
 
     def enable(self):
         self.enabled = True
         for module in self.modules:
             module.enable()
+
+    @feedback()
+    def getChassisX_FPS(self):
+        return self.speeds.vx_fps
+
+    @feedback()
+    def getChassisY_FPS(self):
+        return self.speeds.vy_fps
+
+    @feedback()
+    def getChassisT_DPS(self):
+        return self.speeds.omega_dps
 
     def setup(self):
         # magicbot calls setup() when creating components
@@ -197,8 +232,8 @@ class SwerveChassis:
         self.modules = (
             self.swerveFrontLeft,
             self.swerveFrontRight,
-            self.swerveRearLeft,
-            self.swerveRearRight,
+            self.swerveBackLeft,
+            self.swerveBackRight,
         )
 
         self.kinematics = SwerveDrive4Kinematics(
@@ -229,7 +264,7 @@ class SwerveChassis:
             # state belongs to.test
             module_states = zip(
                 self.modules,
-                self.kinematics.normalizeWheelSpeeds(states, kMaxMetersPerSec),
+                self.kinematics.desaturateWheelSpeeds(states, kMaxMetersPerSec),
             )
             # send state to each associated module
             for module, state in module_states:
