@@ -25,8 +25,13 @@ class Buffer(deque):
     def appendList(self, values):
         for value in values:
             self.append(value)
-            
-            
+
+
+def remap(val, OldMin, OldMax, NewMin, NewMax):
+    """take a value in the old range and return a value in the new range"""
+    return (((val - OldMin) * (NewMax - NewMin)) / (OldMax - OldMin)) + NewMin
+
+
 class TalonPID:
     """Class that holds contants for PID controls"""
 
@@ -54,4 +59,3 @@ class TalonPID:
         motor_control.config_kD(self.slot, self.d, 0)
         motor_control.config_kF(self.slot, self.f, 0)
         motor_control.config_IntegralZone(self.slot, self.iZone, 0)
-
