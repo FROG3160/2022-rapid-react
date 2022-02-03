@@ -1,12 +1,16 @@
 import wpilib
 from wpilib import Joystick, XboxController
 from .common import remap
-from networktables import NetworkTables 
+from networktables import NetworkTables
 from magicbot import feedback
 
 
-
 class FROGStick(Joystick):
+    """Extended class of wpilib.Joystick
+
+    Returns:
+        FROGStick: Custom Joystick class
+    """
 
     DEADBAND = 0.15
     SPEED_DIVISOR = 1
@@ -15,32 +19,81 @@ class FROGStick(Joystick):
     ROTATION_MAX = 0.5
     DEBOUNCE_PERIOD = 0.5
 
-    def __init__(self, channel):
+    def __init__(
+        self, port: int, xAxis: int = 1, yAxis: int = 2, rAxis=3, tAxis=4
+    ) -> None:
+        """Constructor for FROGStick
 
-        super().__init__(channel)
-        self.setThrottleChannel(3)
-        self.setTwistChannel(2)
+        :param port: The port on the Driver Station that the joystick is plugged
+                     into (0-5).
+        :param xAxis: channel for the X axis
+        :param yAxis: channel for the Y axis
+        :param rAxis: channel for the rotation (twist) axis
+        :param tAxis: channel for the throttle axis
+        """
+
+        super().__init__(port)
+        self.setThrottleChannel(tAxis)
+        self.setTwistChannel(rAxis)
+        self.setXChannel(xAxis)
+        self.setYChannel(yAxis)
         self.button_latest = {}
         self.timer = wpilib.Timer
-        self.nt = NetworkTables.getTable("FROGStick_values")
 
-    def update_NT(self, control, value):
-        self.nt.putNumber(control, value)
+    @feedback
+    def getFieldForward(self):
+        """Get's the joystick's Y axis and
+        inverts it so pushing forward is positive
+        and translates to chassis moving away from
+        driver.
+
+        Returns:
+            float: -1 to 1
+        """
+        # inverts the joystick's Y axis so pushing
+        # forward is positive and pulling back is
+        # negative
+        return -self.getY()
+
+    @feedback
+    def getFieldLeft(self):
+        """Get's the joystick's X axis and
+        inverts it so pushing left is positive
+        and translates to chassis moving to the
+        left of the driver.
+
+        Returns:
+            float: -1 to 1
+        """
+        # inverts the joystick's X axis so pushing
+        # left is positive and pushing right is negative
+        return -self.getX()
+
+    @feedback
+    def getFieldRotation(self):
+        """Get's the joystick's Twist axis and
+        inverts it so twisting CCW is positive
+        and translates to chassis rotating CCW.
+
+        Returns:
+            float: -1 to 1
+        """
+        # inverts the joystick's twist axis so CCW
+        # is positive and CW is negative
+        return -self.getTwist()
 
     @feedback
     def get_speed(self):
         # Dampens the -1 to 1 values of the joystick to provide a smoothed acceleration
         speed = self.getY()
         speed = -1 * (
-            speed ** 3 / self.SPEED_DIVISOR if abs(speed) > self.DEADBAND else 0
+            speed**3 / self.SPEED_DIVISOR if abs(speed) > self.DEADBAND else 0
         )
-        self.update_NT('speed', speed)
         return speed
 
     @feedback
     def get_throttle(self):
         val = super().getThrottle()
-        self.update_NT('throttle', val)
         return val
 
     @feedback
@@ -71,7 +124,6 @@ class FROGStick(Joystick):
 
     def get_button(self, num):
         val = self.getRawButton(num)
-        self.update_NT('button_{}'.format(num), val)
         return val
 
     def get_debounced_button(self, num):
@@ -83,8 +135,8 @@ class FROGStick(Joystick):
             if (now - self.button_latest.get(num, 0)) > self.DEBOUNCE_PERIOD:
                 self.button_latest[num] = now
                 val = True
-        self.update_NT('button_{}'.format(num), val)
         return val
+
 
 class FROGBoxSimplicity(wpilib.XboxController):
     DEADBAND = 0.1
@@ -101,10 +153,9 @@ class FROGBoxSimplicity(wpilib.XboxController):
 
     @feedback
     def get_speed(self):
-        speed = self.getLeftY 
+        speed = self.getLeftY
         speed = -1 * (
-            speed ** 3 / self.SPEED_DIVISOR if abs(speed) > self.DEADBAND
-            else 0
+            speed**3 / self.SPEED_DIVISOR if abs(speed) > self.DEADBAND else 0
         )
 
     def get_debounced_button(self, num):
@@ -114,11 +165,12 @@ class FROGBoxSimplicity(wpilib.XboxController):
             if (now - self.button_latest.get(num, 0)) > self.DEBOUNCE_PERIOD:
                 self.button_latest[num] = now
                 val = True
-        self.update_nt('button_{}'.format(num), val)
+        self.update_nt("button_{}".format(num), val)
         return val
 
     def update_nt(self, key, value):
         self.nt.putNumber(key, value)
+
 
 class FROGBoxGunner(wpilib.XboxController):
     DEADBAND = 0.1
@@ -131,13 +183,15 @@ class FROGBoxGunner(wpilib.XboxController):
         super().__init__(channel)
         self.button_latest = {}
         self.timer = wpilib.Timer
-        self.nt = NetworkTables.getTables("compenents/driverstation?gunner_stick")
+        self.nt = NetworkTables.getTables(
+            "compenents/driverstation?gunner_stick"
+        )
 
-    @feedback(key='Elevation')
+    @feedback(key="Elevation")
     def get_elevation(self):
         return (
             self.getRightY / self.ELEVATION_DIVISOR
-            if abs(self.getRightX) > self.DEADBAND 
+            if abs(self.getRightX) > self.DEADBAND
             else 0
         )
 
@@ -145,25 +199,25 @@ class FROGBoxGunner(wpilib.XboxController):
         val = False
         now = self.timer.getFPGATimestamp()
         if self.getButton(num):
-             if (now - self.button_latest.get(num, 0)) > self.DEBOUNCE_PERIOD:
-                 self.button_latest[num] = now
-                 val = True
-        self.update_nt('button_{}'.format(num), val)
-        return val 
+            if (now - self.button_latest.get(num, 0)) > self.DEBOUNCE_PERIOD:
+                self.button_latest[num] = now
+                val = True
+        self.update_nt("button_{}".format(num), val)
+        return val
 
     def get_debounced_POV(self):
         val = -1
         now = self.timer.getFPGATimestamp()
         pov = self.getPOV()
         if pov > -1:
-            if (now - self.button_latest.get('POV', 0)) > self.DEBOUNCE_PERIOD:
-                self.button_latest['POV'] = now
+            if (now - self.button_latest.get("POV", 0)) > self.DEBOUNCE_PERIOD:
+                self.button_latest["POV"] = now
                 val = pov
-        if (now - self.button_latest.get('POV', 0)) < self.DEBOUNCE_PERIOD:
+        if (now - self.button_latest.get("POV", 0)) < self.DEBOUNCE_PERIOD:
             self.setRumble(RIGHT, 1)
         else:
             self.setRumble(RIGHT, 0)
-        self.update_nt('button_pov', val)
+        self.update_nt("button_pov", val)
         return val
 
     def update_nt(self, key, value):
