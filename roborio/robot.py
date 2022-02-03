@@ -5,7 +5,7 @@ import magicbot
 import wpilib
 from components.drivetrain import SwerveModule, SwerveChassis
 from wpimath.geometry import Translation2d
-from wpilib import Joystick
+from components.driverstation import FROGStick
 
 # robot characteristics
 # we are specifying inches and dividing by 12 to get feet,
@@ -70,7 +70,8 @@ class FROGbot(magicbot.MagicRobot):
         self.swerveBackLeft_steerOffset = 0.0
         self.swerveBackRight_steerOffset = 0.0
 
-        self.driveStick = Joystick(0)
+        # config for saitek joystick
+        self.driveStick = FROGStick(0, 0, 1, 3, 2)
 
     def teleopInit(self):
         """Called when teleop starts; optional"""
@@ -80,14 +81,14 @@ class FROGbot(magicbot.MagicRobot):
     def teleopPeriodic(self):
         """Called on each iteration of the control loop"""
         vX, vY, vT = (
-            -(self.driveStick.getY(), 0)[
-                abs(self.driveStick.getY()) < kDeadzone
+            (self.driveStick.getFieldForward(), 0)[
+                abs(self.driveStick.getFieldForward()) < kDeadzone
             ],
-            -(self.driveStick.getX(), 0)[
-                abs(self.driveStick.getX()) < kDeadzone
+            (self.driveStick.getFieldLeft(), 0)[
+                abs(self.driveStick.getFieldLeft()) < kDeadzone
             ],
-            -(self.driveStick.getRawAxis(3), 0)[
-                abs(self.driveStick.getRawAxis(3)) < kDeadzone
+            (self.driveStick.getFieldRotation(), 0)[
+                abs(self.driveStick.getFieldRotation()) < kDeadzone
             ],
         )
         self.swerveChassis.drive(vX, vY, vT)
