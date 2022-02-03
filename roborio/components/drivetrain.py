@@ -1,4 +1,3 @@
-from re import S
 from ctre import (
     FeedbackDevice,
     RemoteSensorSource,
@@ -20,7 +19,7 @@ from wpimath.kinematics import (
 )
 import math
 from magicbot import feedback
-from .sensors import FROGGyro
+from sensors import FROGGyro
 
 
 # Motor Control modes
@@ -109,7 +108,7 @@ class SwerveModule:
     def getStateSpeed(self):
         return self.state.speed
 
-    #TODO: Determine which way we want these 
+    # TODO: Determine which way we want these
     # to read.  Right now they are inverted
     # to visually show positive angles to the
     # right (clockwise) to match the smartdashboard
@@ -117,7 +116,7 @@ class SwerveModule:
     def getStateDegrees(self):
         return -self.state.angle.degrees()
 
-    #TODO: Determine which way we want these 
+    # TODO: Determine which way we want these
     # to read.  Right now they are inverted
     # to visually show positive angles to the
     # right (clockwise) to match the smartdashboard
@@ -187,7 +186,6 @@ class SwerveChassis:
     swerveBackLeft: SwerveModule
     swerveBackRight: SwerveModule
     gyro = FROGGyro
-    
 
     def __init__(self):
         self.enabled = False
@@ -204,7 +202,6 @@ class SwerveChassis:
         ]:
             module.disable()
 
-    
     def drive(self, vX, vY, vT):
         # takes values from the joystick and translates it
         # into chassis movement
@@ -212,14 +209,15 @@ class SwerveChassis:
             vX * kMaxMetersPerSec, vY * kMaxMetersPerSec, vT * kMaxRadiansPerSec
         )
 
-
     def field_oriented_drive(self, vX, vY, vT):
         # takes values from the joystick and translates it
         # into chassis movement
         self.speeds = ChassisSpeeds.fromFieldRelativeSpeeds(
-            vX * kMaxMetersPerSec, vY * kMaxMetersPerSec, vT * kMaxRadiansPerSec, Rotation2d.fromDegrees(-self.gyro.getHeading())
+            vX * kMaxMetersPerSec,
+            vY * kMaxMetersPerSec,
+            vT * kMaxRadiansPerSec,
+            Rotation2d.fromDegrees(-self.gyro.getHeading()),
         )
-
 
     def enable(self):
         self.enabled = True
