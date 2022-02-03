@@ -7,13 +7,14 @@ BUFFERLEN = 50
 
 SENSORUNITS_IN_INCHES = 0.0394
 
+
 class FROGGyro:
     def __init__(self):
-      # TODO Make sure if we need this.
+        # TODO Make sure if we need this.
         self.gyro = AHRS.create_spi()
         self.gyro.reset()
 
-    @feedback(key='heading')
+    @feedback(key="heading")
     def getHeading(self):
         # returns gyro heading +180 to -180 degrees
         return self.gyro.getYaw()
@@ -48,19 +49,17 @@ class FROGdar:
             and self.targetRange is not None
         )
 
-    @feedback(key='sensor_raw') 
+    @feedback(key="sensor_raw")
     def getSensorData(self):
         errorcode, (val1, val2) = self.pwm_sensor.getPWMInput(
             CANifier.PWMChannel.PWMChannel0
         )
         return val1
 
-    @feedback(key='sensor_buffered')
+    @feedback(key="sensor_buffered")
     def getBufferedSensorData(self):
         return self.targetRange
 
-       
-        
     @feedback(key="range_inches")
     def getDistance(self):
         if self.isValidData():
@@ -77,4 +76,3 @@ class FROGdar:
         else:
             self.rangeBuffer.clear()
             self.targetRange = None
-
