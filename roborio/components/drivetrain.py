@@ -20,6 +20,8 @@ from wpimath.kinematics import (
 )
 import math
 from magicbot import feedback
+from .sensors import FROGGyro
+
 
 # Motor Control modes
 VELOCITY_MODE = ControlMode.Velocity
@@ -182,8 +184,10 @@ class SwerveChassis:
     # TODO: Add gyro to chassis, needed for field-oriented movement
     swerveFrontLeft: SwerveModule
     swerveFrontRight: SwerveModule
-    swerveRearLeft: SwerveModule
-    swerveRearRight: SwerveModule
+    swerveBackLeft: SwerveModule
+    swerveBackRight: SwerveModule
+    gyro = FROGGyro
+    
 
     def __init__(self):
         self.enabled = False
@@ -195,17 +199,27 @@ class SwerveChassis:
         for module in [
             self.swerveFrontLeft,
             self.swerveFrontRight,
-            self.swerveRearLeft,
-            self.swerveRearRight,
+            self.swerveBackLeft,
+            self.swerveBackRight,
         ]:
             module.disable()
 
+    
     def drive(self, vX, vY, vT):
         # takes values from the joystick and translates it
         # into chassis movement
         self.speeds = ChassisSpeeds(
             vX * kMaxMetersPerSec, vY * kMaxMetersPerSec, vT * kMaxRadiansPerSec
         )
+
+
+    def field_oriented_drive(self, vX, vY, vT):
+        # takes values from the joystick and translates it
+        # into chassis movement
+        self.speeds = ChassisSpeeds.fromFieldRelativeSpeeds(
+            vX * kMaxMetersPerSec, vY * kMaxMetersPerSec, vT * kMaxRadiansPerSec, Rotation2d.fromDegrees(-self.gyro.getHeading())
+        )
+
 
     def enable(self):
         self.enabled = True
@@ -232,8 +246,8 @@ class SwerveChassis:
         self.modules = (
             self.swerveFrontLeft,
             self.swerveFrontRight,
-            self.swerveRearLeft,
-            self.swerveRearRight,
+            self.swerveBackLeft,
+            self.swerveBackRight,
         )
 
         self.kinematics = SwerveDrive4Kinematics(
