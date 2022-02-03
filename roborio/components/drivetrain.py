@@ -20,6 +20,8 @@ from wpimath.kinematics import (
 )
 import math
 from magicbot import feedback
+from .sensors import FROGGyro
+
 
 # Motor Control modes
 VELOCITY_MODE = ControlMode.Velocity
@@ -184,6 +186,8 @@ class SwerveChassis:
     swerveFrontRight: SwerveModule
     swerveBackLeft: SwerveModule
     swerveBackRight: SwerveModule
+    gyro = FROGGyro
+    
 
     def __init__(self):
         self.enabled = False
@@ -200,12 +204,22 @@ class SwerveChassis:
         ]:
             module.disable()
 
+    
     def drive(self, vX, vY, vT):
         # takes values from the joystick and translates it
         # into chassis movement
         self.speeds = ChassisSpeeds(
             vX * kMaxMetersPerSec, vY * kMaxMetersPerSec, vT * kMaxRadiansPerSec
         )
+
+
+    def field_oriented_drive(self, vX, vY, vT):
+        # takes values from the joystick and translates it
+        # into chassis movement
+        self.speeds = ChassisSpeeds.fromFieldRelativeSpeeds(
+            vX * kMaxMetersPerSec, vY * kMaxMetersPerSec, vT * kMaxRadiansPerSec, Rotation2d.fromDegrees(-self.gyro.getHeading())
+        )
+
 
     def enable(self):
         self.enabled = True
