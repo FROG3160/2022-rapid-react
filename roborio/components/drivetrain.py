@@ -20,7 +20,8 @@ from wpimath.kinematics import (
 )
 import math
 from magicbot import feedback
-from sensors import FROGGyro
+from .sensors import FROGGyro
+
 
 # Motor Control modes
 VELOCITY_MODE = ControlMode.Velocity
