@@ -1,5 +1,5 @@
 # components that are part of the shooter
-# Issue No. 6
+from roborio.components.sensors import FROGdar
 from ctre import (
     WPI_TalonFX, 
     FeedbackDevice, 
@@ -86,6 +86,28 @@ class Flywheel:
     def setVelocity(self, velocity):
         self._controlMode = ControlMode.Velocity
         self._velocity = velocity
+        
+class FROGShooter:
+    lidar: FROGdar 
+
+    def __init__(self):
+        self.enabled = False
+
+    def enable(self):
+        self.enabled = True
+
+    def set_automatic(self):
+        pass
+
+    def set_manual(self):
+        pass
+
+    def disable(self):
+        pass
+
+    def getdistance(self):
+        # get the value/distance from the lidar in inches
+        return self.lidar.getDistance() 
 
     def incrementSpeed(self):
         self._velocity += FLYWHEEL_INCREMENT
@@ -103,3 +125,4 @@ class Flywheel:
         else:
             self.flywheel_motor_top.set(0)
             self.flywheel_motor_bottom.set(0)
+
