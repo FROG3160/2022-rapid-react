@@ -1,8 +1,12 @@
 import wpilib
 from wpilib import Joystick, XboxController
+from wpilib.interfaces import GenericHID
 from .common import remap
 from networktables import NetworkTables
 from magicbot import feedback
+
+RIGHT_RUMBLE = GenericHID.RumbleType.kRightRumble
+LEFT_RUMBLE = GenericHID.RumbleType.kLeftRumble
 
 
 class FROGStick(Joystick):
@@ -24,8 +28,8 @@ class FROGStick(Joystick):
     ) -> None:
         """Constructor for FROGStick
 
-        :param port: The port on the Driver Station that the joystick is plugged
-                     into (0-5).
+        :param port: The port on the Driver Station that the joystick
+        is plugged into (0-5).
         :param xAxis: channel for the X axis
         :param yAxis: channel for the Y axis
         :param rAxis: channel for the rotation (twist) axis
@@ -138,7 +142,7 @@ class FROGStick(Joystick):
         return val
 
 
-class FROGBoxSimplicity(wpilib.XboxController):
+class FROGBoxSimplicity(XboxController):
     DEADBAND = 0.1
     SPEED_DIVISOR = 1
     ROTATION_DIVISOR = 1
@@ -172,7 +176,7 @@ class FROGBoxSimplicity(wpilib.XboxController):
         self.nt.putNumber(key, value)
 
 
-class FROGBoxGunner(wpilib.XboxController):
+class FROGBoxGunner(XboxController):
     DEADBAND = 0.1
     ELEVATION_DIVISOR = 1
     ROTATION_DIVISOR = 1
@@ -214,9 +218,9 @@ class FROGBoxGunner(wpilib.XboxController):
                 self.button_latest["POV"] = now
                 val = pov
         if (now - self.button_latest.get("POV", 0)) < self.DEBOUNCE_PERIOD:
-            self.setRumble(RIGHT, 1)
+            self.setRumble(RIGHT_RUMBLE, 1)
         else:
-            self.setRumble(RIGHT, 0)
+            self.setRumble(RIGHT_RUMBLE, 0)
         self.update_nt("button_pov", val)
         return val
 
