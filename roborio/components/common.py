@@ -1,5 +1,6 @@
 from collections import deque
 
+
 class Buffer(deque):
     def __init__(self, size, validLength=1):
         self.validLength = validLength
@@ -7,7 +8,7 @@ class Buffer(deque):
 
     def filterList(self):
         # our calculations can't accept None values
-        return [x for x in self if not x is None]
+        return [x for x in self if x is not None]
 
     def lengthFiltered(self):
         return len(self.filterList())
