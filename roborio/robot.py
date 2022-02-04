@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 
-from ctre import WPI_CANCoder, WPI_TalonFX
+from ctre import WPI_CANCoder, WPI_TalonFX, CANifier
 import magicbot
 import wpilib
 from components.drivetrain import SwerveModule, SwerveChassis
 from wpimath.geometry import Translation2d
 from components.driverstation import FROGStick
+from components.sensors import FROGGyro, FROGdar
 
 # robot characteristics
 # we are specifying inches and dividing by 12 to get feet,
@@ -21,7 +22,7 @@ class FROGbot(magicbot.MagicRobot):
     """
     Initialize components here.
     """
-
+    gyro: FROGGyro
     swerveChassis: SwerveChassis
 
     swerveFrontLeft: SwerveModule
@@ -91,7 +92,7 @@ class FROGbot(magicbot.MagicRobot):
                 abs(self.driveStick.getFieldRotation()) < kDeadzone
             ],
         )
-        self.swerveChassis.drive(vX, vY, vT)
+        self.swerveChassis.field_oriented_drive(vX, vY, vT)
 
     def testInit(self):
         """Called when test mode starts; optional"""
