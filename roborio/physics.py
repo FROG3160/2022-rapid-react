@@ -153,7 +153,8 @@ class PhysicsEngine:
         speed = 16.3 #(max speed of the robot?)
         deadzone = 0.15
         
-        chassis_speeds = four_motor_swerve_drivetrain(lr_motor, rr_motor, lf_motor, rf_motor, lr_angle, rr_angle, lf_angle, rf_angle, x_wheelbase, y_wheelbase, speed, linear_deadzone(deadzone))
+        #chassis_speeds = four_motor_swerve_drivetrain(lr_motor, rr_motor, lf_motor, rf_motor, lr_angle, rr_angle, lf_angle, rf_angle, x_wheelbase, y_wheelbase, speed, linear_deadzone(deadzone))
+        chassis_speeds = self.robot.swerveChassis.speeds
         pose = self.physics_controller.drive(chassis_speeds, tm_diff)
 
         # this works to update a motor in the sim GUI, but only changing the percentOutput and motorOutputLeadVoltage attributes.
