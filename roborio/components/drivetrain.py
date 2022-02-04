@@ -19,7 +19,7 @@ from wpimath.kinematics import (
 )
 import math
 from magicbot import feedback
-from sensors import FROGGyro
+from .sensors import FROGGyro
 
 
 # Motor Control modes
@@ -185,7 +185,7 @@ class SwerveChassis:
     swerveFrontRight: SwerveModule
     swerveBackLeft: SwerveModule
     swerveBackRight: SwerveModule
-    gyro = FROGGyro
+    gyro: FROGGyro
 
     def __init__(self):
         self.enabled = False
@@ -216,7 +216,7 @@ class SwerveChassis:
             vX * kMaxMetersPerSec,
             vY * kMaxMetersPerSec,
             vT * kMaxRadiansPerSec,
-            Rotation2d.fromDegrees(-self.gyro.getHeading()),
+            Rotation2d.fromDegrees(-self.gyro.getAngle()),
         )
 
     def enable(self):

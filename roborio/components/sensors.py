@@ -26,6 +26,12 @@ class FROGGyro:
     def execute(self):
         pass
 
+    def getAngle(self):
+        return self.gyro.getAngle()
+
+    def setAngle(self, angle):
+        self.gyro.setAngleAdjustment(angle)
+
 
 class FROGdar:
     pwm_sensor: CANifier
