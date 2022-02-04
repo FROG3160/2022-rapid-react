@@ -18,8 +18,8 @@ from pyfrc.physics.core import PhysicsInterface
 from pyfrc.physics.units import units
 from wpilib.simulation import SimDeviceSim
 from pyfrc.physics.units import units
-from pyfrc.physics.drivetrains import four_motor_swerve_drivetrain
-from components.drivetrain import kVelocityMultiplier
+from pyfrc.physics.drivetrains import four_motor_swerve_drivetrain, linear_deadzone
+from components.drivetrain import kVelocityMultiplier, kMaxMetersPerSec
 
 # import typing
 
@@ -137,9 +137,26 @@ class PhysicsEngine:
         """
         # TODO: calculate all speeds and angles and pass them to four_motor_swerve_drivetrain()
         # chassis_speeds = four_motor_swerve_drivetrain()
-        # self.physics_controller.drive(*chassis_speeds)
+        # pose = self.physics_controller.drive(*chassis_speeds)
+        lr_motor = self.robot.swerveBackLeft.getStateSpeed() / kMaxMetersPerSec
+        rr_motor = self.robot.swerveBackRight.getStateSpeed() / kMaxMetersPerSec
+        lf_motor = self.robot.swerveFrontLeft.getStateSpeed() / kMaxMetersPerSec
+        rf_motor = self.robot.swerveFrontRight.getStateSpeed() / kMaxMetersPerSec
+
+        lr_angle = self.robot.swerveBackLeft.getStateDegrees()
+        rr_angle = self.robot.swerveBackRight.getStateDegrees()
+        lf_angle = self.robot.swerveFrontLeft.getStateDegrees()
+        rf_angle = self.robot.swerveFrontRight.getStateDegrees()
+
+        x_wheelbase = 27.75/12
+        y_wheelbase = 21.75/12
+        speed = 16.3 #(max speed of the robot?)
+        deadzone = 0.15
+        
+        chassis_speeds = four_motor_swerve_drivetrain(lr_motor, rr_motor, lf_motor, rf_motor, lr_angle, rr_angle, lf_angle, rf_angle, x_wheelbase, y_wheelbase, speed, linear_deadzone(deadzone))
+        pose = self.physics_controller.drive(chassis_speeds, tm_diff)
 
         # this works to update a motor in the sim GUI, but only changing the percentOutput and motorOutputLeadVoltage attributes.
         # self.simFL_drive.setIntegratedSensorVelocity(round(self.simBot.swerveFrontLeft_drive.getSelectedSensorVelocity()))
         # self.physics_controller.drive(self.robot.swerveChassis.speeds, tm_diff)
-        pass
+        self.robot.gyro.setAngle(-pose.rotation().degrees())
