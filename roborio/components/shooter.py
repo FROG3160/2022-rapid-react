@@ -1,5 +1,3 @@
-# components that are part of the shooter
-from roborio.components.sensors import FROGdar
 from ctre import (
     WPI_TalonFX,
     FeedbackDevice,
@@ -7,8 +5,10 @@ from ctre import (
     NeutralMode,
     TalonFXInvertType,
 )
-from .common import TalonPID
 from magicbot import feedback
+from components.common import TalonPID
+from components.sensors import FROGdar
+
 
 # TODO Find out the Min/Max of the velocity and the tolerence for the Flywheel
 FLYWHEEL_MODE = ControlMode.Velocity
@@ -23,8 +23,7 @@ FLYWHEEL_LOOP_RAMP = 0.25
 
 
 class Flywheel:
-    flywheel_motor_top: WPI_TalonFX
-    flywheel_motor_bottom: WPI_TalonFX
+    flywheel_motor: WPI_TalonFX
 
     def __init__(self):
         self.enabled = False
@@ -47,16 +46,10 @@ class Flywheel:
     # read current encoder velocity
     @feedback(key="velocity")
     def getVelocity(self):
-        # sensor values are reversed.  we command a positive value and the
-        # sensor shows a negative one, so we negate the output
-        return (
-            -self.flywheel_motor_top.getSelectedSensorVelocity(
-                FeedbackDevice.IntegratedSensor
-            ),
-            -self.flywheel_motor_bottom.getSelectedSensorVelocity(
-                FeedbackDevice.IntegratedSensor
-            ),
-        )
+        #sensor values are reversed.  we command a positive value and the
+        #sensor shows a negative one, so we negate the output
+        return -self.flywheel_motor.getSelectedSensorVelocity(
+            FeedbackDevice.IntegratedSensor)
 
     @feedback(key="commanded")
     def getCommandedVelocity(self):
@@ -64,28 +57,30 @@ class Flywheel:
 
     def setup(self):
         # Falcon500 motors use the integrated sensor
-        self.flywheel_motor_top.configSelectedFeedbackSensor(
+        self.flywheel_motor.configSelectedFeedbackSensor(
             FeedbackDevice.IntegratedSensor, 0, 0
         )
-        self.flywheel_motor_bottom.configSelectedFeedbackSensor(
-            FeedbackDevice.IntegratedSensor, 0, 0
-        )
-        self.flywheel_motor_top.setSensorPhase(False)
-        self.flywheel_motor_bottom.setSensorPhase(False)
+        self.flywheel_motor.setSensorPhase(False)
         # = setInverted(True)
-        self.flywheel_motor_top.setInverted(TalonFXInvertType.CounterClockwise)
-        self.flywheel_motor_bottom.setInverted(TalonFXInvertType.Clockwise)
-        self.flywheel_motor_top.setNeutralMode(NeutralMode.Coast)
-        self.flywheel_motor_bottom.setNeutralMode(NeutralMode.Coast)
-        FLYWHEEL_PID.configTalon(self.flywheel_motor_top)
-        FLYWHEEL_PID.configTalon(self.flywheel_motor_bottom)
+        self.flywheel_motor.setInverted(
+            TalonFXInvertType.CounterClockwise)
+        self.flywheel_motor.setNeutralMode(
+            NeutralMode.Coast)
+        FLYWHEEL_PID.configTalon(
+            self.flywheel_motor)
         # use closed loop ramp to accelerate smoothly
-        self.flywheel_motor_top.configClosedloopRamp(FLYWHEEL_LOOP_RAMP)
-        self.flywheel_motor_bottom.configClosedloopRamp(FLYWHEEL_LOOP_RAMP)
+        self.flywheel_motor.configClosedloopRamp(
+            FLYWHEEL_LOOP_RAMP)
 
     def setVelocity(self, velocity):
         self._controlMode = ControlMode.Velocity
         self._velocity = velocity
+        
+    def execute(self):
+        if self.enabled:
+            self.flywheel_motor.set(self._controlMode, self._velocity)
+        else:
+            self.flywheel_motor.set(0)
 
 
 class FROGShooter:
@@ -119,10 +114,6 @@ class FROGShooter:
         self.setVelocity(self._velocity)
 
     def execute(self):
-        if self.enabled:
-            self.flywheel_motor_top.set(self._controlMode, self._velocity)
-            self.flywheel_motor_bottom.set(self._controlMode, self._velocity)
+        pass
 
-        else:
-            self.flywheel_motor_top.set(0)
-            self.flywheel_motor_bottom.set(0)
+
