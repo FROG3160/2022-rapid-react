@@ -23,6 +23,7 @@ class FROGbot(magicbot.MagicRobot):
     """
     Initialize components here.
     """
+
     gyro: FROGGyro
     lidar: FROGdar
     swerveChassis: SwerveChassis
@@ -77,12 +78,13 @@ class FROGbot(magicbot.MagicRobot):
         self.swerveBackLeft_steerOffset = 0.0
         self.swerveBackRight_steerOffset = 0.0
 
-        #flywheel motors
+        # flywheel motors
         self.lowerFlywheel_motor = WPI_TalonFX(41)
         self.upperFlywheel_motor = WPI_TalonFX(42)
 
-        #TODO:  Add in CANdle on channel 35
-        #TODO:  Add in CANifier for lidar on channel 36
+        # TODO:  Add in CANdle on channel 35
+
+        # CANifier for LIDAR
         self.lidar_canifier = CANifier(36)
 
         # config for saitek joystick

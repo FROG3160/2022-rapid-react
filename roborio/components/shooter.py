@@ -49,7 +49,8 @@ class Flywheel:
         # sensor values are reversed.  we command a positive value and the
         # sensor shows a negative one, so we negate the output
         return -self.motor.getSelectedSensorVelocity(
-            FeedbackDevice.IntegratedSensor)
+            FeedbackDevice.IntegratedSensor
+        )
 
     @feedback(key="commanded")
     def getCommandedVelocity(self):
@@ -62,20 +63,16 @@ class Flywheel:
         )
         self.motor.setSensorPhase(False)
         # = setInverted(True)
-        self.motor.setInverted(
-            TalonFXInvertType.CounterClockwise)
-        self.motor.setNeutralMode(
-            NeutralMode.Coast)
-        FLYWHEEL_PID.configTalon(
-            self.motor)
+        self.motor.setInverted(TalonFXInvertType.CounterClockwise)
+        self.motor.setNeutralMode(NeutralMode.Coast)
+        FLYWHEEL_PID.configTalon(self.motor)
         # use closed loop ramp to accelerate smoothly
-        self.motor.configClosedloopRamp(
-            FLYWHEEL_LOOP_RAMP)
+        self.motor.configClosedloopRamp(FLYWHEEL_LOOP_RAMP)
 
     def setVelocity(self, velocity):
         self._controlMode = ControlMode.Velocity
         self._velocity = velocity
-        
+
     def execute(self):
         if self.enabled:
             self.motor.set(self._controlMode, self._velocity)
@@ -117,5 +114,3 @@ class FROGShooter:
 
     def execute(self):
         pass
-
-
