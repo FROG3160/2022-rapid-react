@@ -74,6 +74,13 @@ class FROGbot(magicbot.MagicRobot):
         # config for saitek joystick
         self.driveStick = FROGStick(0, 0, 1, 3, 2)
 
+        self.field = wpilib.Field2d()
+        # simulation already places field data in SmartDashboard
+        # so we need to keep this from overwriting that data
+        # during simulation
+        if not self.isSimulation():
+            wpilib.SmartDashboard.putData(self.field)
+
     def teleopInit(self):
         """Called when teleop starts; optional"""
         self.swerveChassis.enable()
