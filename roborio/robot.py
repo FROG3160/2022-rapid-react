@@ -7,6 +7,7 @@ from components.drivetrain import SwerveModule, SwerveChassis
 from wpimath.geometry import Translation2d
 from components.driverstation import FROGStick
 from components.sensors import FROGGyro, FROGdar
+from components.shooter import FROGShooter, Flywheel
 
 # robot characteristics
 # we are specifying inches and dividing by 12 to get feet,
@@ -23,12 +24,17 @@ class FROGbot(magicbot.MagicRobot):
     Initialize components here.
     """
     gyro: FROGGyro
+    lidar: FROGdar
     swerveChassis: SwerveChassis
+    shooter: FROGShooter
 
     swerveFrontLeft: SwerveModule
     swerveFrontRight: SwerveModule
     swerveBackLeft: SwerveModule
     swerveBackRight: SwerveModule
+
+    lowerFlywheel: Flywheel
+    upperFlywheel: Flywheel
 
     def createObjects(self):
         """Create motors and inputs"""
@@ -70,6 +76,14 @@ class FROGbot(magicbot.MagicRobot):
         self.swerveFrontRight_steerOffset = 0.0
         self.swerveBackLeft_steerOffset = 0.0
         self.swerveBackRight_steerOffset = 0.0
+
+        #flywheel motors
+        self.lowerFlywheel_motor = WPI_TalonFX(41)
+        self.upperFlywheel_motor = WPI_TalonFX(42)
+
+        #TODO:  Add in CANdle on channel 35
+        #TODO:  Add in CANifier for lidar on channel 36
+        self.lidar_canifier = CANifier(36)
 
         # config for saitek joystick
         self.driveStick = FROGStick(0, 0, 1, 3, 2)

@@ -34,7 +34,7 @@ class FROGGyro:
 
 
 class FROGdar:
-    pwm_sensor: CANifier
+    canifier: CANifier
 
     def __init__(self):
         self.enabled = False
@@ -57,7 +57,7 @@ class FROGdar:
 
     @feedback(key="sensor_raw")
     def getSensorData(self):
-        errorcode, (val1, val2) = self.pwm_sensor.getPWMInput(
+        errorcode, (val1, val2) = self.canifier.getPWMInput(
             CANifier.PWMChannel.PWMChannel0
         )
         return val1
