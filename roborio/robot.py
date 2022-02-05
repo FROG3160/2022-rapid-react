@@ -5,7 +5,7 @@ import magicbot
 import wpilib
 from components.drivetrain import SwerveModule, SwerveChassis
 from wpimath.geometry import Translation2d
-from components.driverstation import FROGStick
+from components.driverstation import FROGStick, FROGBoxGunner
 from components.sensors import FROGGyro, FROGdar
 from components.shooter import FROGShooter, Flywheel
 
@@ -89,6 +89,7 @@ class FROGbot(magicbot.MagicRobot):
 
         # config for saitek joystick
         self.driveStick = FROGStick(0, 0, 1, 3, 2)
+        self.gunnerControl = FROGBoxGunner(1)
 
         self.field = wpilib.Field2d()
         # simulation already places field data in SmartDashboard
@@ -104,6 +105,19 @@ class FROGbot(magicbot.MagicRobot):
 
     def teleopPeriodic(self):
         """Called on each iteration of the control loop"""
+
+        # Get gunner controls
+        if self.gunnerControl.getYButtonReleased():
+            self.shooter.upperFlywheel.incrementSpeed()
+        if self.gunnerControl.getAButtonReleased():
+            self.shooter.upperFlywheel.decrementSpeed()
+        if self.gunnerControl.getBButtonReleased():
+            self.shooter.lowerFlywheel.incrementSpeed()
+        if self.gunnerControl.getXButtonReleased():
+            self.shooter.lowerFlywheel.decrementSpeed()
+        
+
+        # Get driver controls
         vX, vY, vT = (
             (self.driveStick.getFieldForward(), 0)[
                 abs(self.driveStick.getFieldForward()) < kDeadzone
