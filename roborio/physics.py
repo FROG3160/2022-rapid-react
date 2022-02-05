@@ -20,6 +20,7 @@ from wpilib.simulation import SimDeviceSim
 from pyfrc.physics.units import units
 from pyfrc.physics.drivetrains import four_motor_swerve_drivetrain, linear_deadzone
 from components.drivetrain import kVelocityMultiplier, kMaxMetersPerSec
+from pyfrc.physics.visionsim import VisionSim, VisionSimTarget
 
 # import typing
 
@@ -62,6 +63,12 @@ class PhysicsEngine:
             6 * units.inch,                     # wheel diameter
         )
         """
+
+        targets = [VisionSimTarget(27, 13.5, 0, 360)]
+
+        self.vision = VisionSim(
+            targets, 51.37, 9, 54, 100, .05, physics_controller
+        )
         # # Drive motors
         # self.simFL_drive = self.simBot.swerveFrontLeft_drive.getSimCollection()
         # self.simFR_drive = self.simBot.swerveFrontRight_drive.getSimCollection()
