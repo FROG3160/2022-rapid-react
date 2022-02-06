@@ -1,7 +1,8 @@
 # To adjust targeting settings within Photon Vision, go to 10.31.60.3:5800 in browser while on robot network.
-
+# Expecting 15-20 fps with cargo tracking and 50-75 fps with goal tracking.
 
 import photonvision
+from .common import Buffer
 from autonomous import #TODO: Import Alliance Color
 
 
@@ -11,16 +12,7 @@ class FROGVision:
 
         # Sets varible to specifed camera. Must match camera name on photon vision web interface.
         self.CARGOcam = photonvision._photonvision.PhotonCamera("CargoCam")
-        #TODO: Verify GoalCam name on photon web interface.
-        self.Goalcam = photonvision._photonvision.PhotonCamera("PiCam")
-
-        # Grabs the latest results from the Cameras and then get the best target.
-        # Best target is chosen based off of the parameters on the photon vision web interface.
-        self.CargoResults = self.CARGOcam.getLatestResult()
-        self.CargoTarget = self.CargoResults.getBestTarget()
-
-        self.GoalResults = self.Goalcam.getLatestResult()
-        self.GoalTarget = self.GoalResults.getBestTarget()
+        self.Goalcam = photonvision._photonvision.PhotonCamera("TargetPiCam")
 
 
     def setup(self):
@@ -36,6 +28,18 @@ class FROGVision:
 
         else:
             self.CARGOcam.setDriverMode(True)
+
+
+    def execute(self):
+
+        # Grabs the latest results from the Cameras and then get the best target.
+        # Best target is chosen based off of the parameters on the photon vision web interface.
+        self.CargoResults = self.CARGOcam.getLatestResult()
+        self.CargoTarget = self.CargoResults.getBestTarget()
+
+        self.GoalResults = self.Goalcam.getLatestResult()
+        self.GoalTarget = self.GoalResults.getBestTarget() 
+
 
 
     def CurrentCargoPipeline(self):
