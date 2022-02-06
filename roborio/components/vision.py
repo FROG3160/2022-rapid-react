@@ -2,13 +2,20 @@
 # Expecting 15-20 fps with cargo tracking and 50-75 fps with goal tracking.
 # TODO: Verfify camera resolutions and FOV.
 # Cargo cam resolution is 340x240. Goal cam is resolution is 320x240.
-# LifeCam horizontal FOV is 62.8. Pitch and yaw postition are -31.4 to 31.4 degrees.
-# PiCam horizontal FOV is 53.5. Pitch and yaw postition are -26.75 to 26.75 degrees.
+
 
 import photonvision
 from .common import Buffer
-from autonomous import #TODO: Import Alliance Color
 
+#TODO: Import Alliance Color
+#from autonomous import alliance 
+
+# Values by which the the results are divided to give an output of -100 to 100.
+# LifeCam FOV is H62.8 x V37.9. Yaw is -31.4 to 31.4 degrees. Pitch is -18.9 to 18.9 degrees.
+# PiCam horizontal FOV is 53.5. Yaw is -26.75 to 26.75 degrees.
+LC_X_div = 0.314
+LC_Y_div = 0.189
+PI_X_div = 0.267
 
 class FROGVision:
 
@@ -29,6 +36,7 @@ class FROGVision:
         # Switches to specified pipeline depending on alliance color.
         # 2 is Blue Cargo, 1 is Red Cargo, and -1 is Driver Mode.
         #TODO: Modify if statement to get alliance color
+        '''
         if "alliance color" == blue():
             self.CARGOcam.setPipelineIndex(2)
 
@@ -36,7 +44,7 @@ class FROGVision:
             self.CARGOcam.setPipelineIndex(1)
 
         else:
-            self.CARGOcam.setDriverMode(True)
+            self.CARGOcam.setDriverMode(True)'''
 
 
     def execute(self):
@@ -61,26 +69,27 @@ class FROGVision:
 
 
     # Yaw is left- and right+ degrees with center being 0
+    # Values are divided so as to make the final values between -100 and 100
     def getGoalX(self):
-        return self.GoalTarget.getYaw()
+        return (self.GoalTarget.getYaw() / PI_X_div)
 
     def getGoalXAverage(self):
-        return self.GoalYawBuff.average()
+        return (self.GoalYawBuff.average() / PI_X_div)
 
     
     def getCargoX(self):
-        return self.CargoTarget.getYaw()
+        return (self.CargoTarget.getYaw() / LC_X_div)
 
     def getCargoXAverage(self):
-        return self.CargoYawBuff.average()
+        return (self.CargoYawBuff.average() / LC_X_div)
 
 
     # Pitch is up+ and down- degrees with center being 0
     def getCargoY(self):
-        return self.CargoTarget.getPitch()
+        return (self.CargoTarget.getPitch() / LC_Y_div)
 
     def getCargoYAverage(self):
-        return self.CargoPitchBuff.average()
+        return (self.CargoPitchBuff.average() / LC_Y_div)
 
 
     def setCargoRed(self):
@@ -91,3 +100,5 @@ class FROGVision:
 
     def setDriverMode(self):
         return self.CARGOcam.setDriverMode(True)
+
+
