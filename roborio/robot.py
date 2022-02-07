@@ -88,7 +88,9 @@ class FROGbot(magicbot.MagicRobot):
         self.lidar_canifier = CANifier(36)
 
         # config for saitek joystick
-        self.driveStick = FROGStick(0, 0, 1, 3, 2)
+        # self.driveStick = FROGStick(0, 0, 1, 3, 2)
+        # config for Logitech Extreme 3D
+        self.driveStick = FROGStick(0, 0, 1, 2, 3)
         self.gunnerControl = FROGBoxGunner(1)
 
         self.field = wpilib.Field2d()
