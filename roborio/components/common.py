@@ -2,30 +2,43 @@ from collections import deque
 
 
 class Buffer(deque):
-    def __init__(self, size, validLength=1):
+    def __init__(self, size: int, validLength: int = 1):
+        """Constructor for Buffer
+
+        Args:
+            size (int): Maximum size of the buffer.  The largest number of values
+                the buffer will keep.
+            validLength (int, optional): The number of values in the buffer needed
+                to treat the amount of data as valid. average() returns None if 
+                there aren't enough values.  Defaults to 1.
+        """
         self.validLength = validLength
         super().__init__(maxlen=size)
 
-    def filterList(self):
+    def _filterList(self):
         # our calculations can't accept None values
         return [x for x in self if x is not None]
 
-    def lengthFiltered(self):
-        return len(self.filterList())
+    def _getBufferLength(self):
+        return len(self._filterList())
 
-    def isValidData(self):
-        return self.lengthFiltered() >= self.validLength
+    def _isValidData(self):
+        return self._getBufferLength() >= self.validLength
 
-    def average(self):
-        if self.isValidData():
-            filteredList = self.filterList()
+    def average(self) -> float:
+        """Get the average of all values in the buffer.
+
+        Returns:
+            float: The average of all values in the buffer if the number of values
+                is >= the validLength parameter.
+            None:  Returned if there aren't enough values to be >= the validLength
+                parameter.
+        """
+        if self._isValidData():
+            filteredList = self._filterList()
             return sum(filteredList) / len(filteredList)
         else:
             return None
-
-    def appendList(self, values):
-        for value in values:
-            self.append(value)
 
 
 def remap(val, OldMin, OldMax, NewMin, NewMax):
