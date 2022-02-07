@@ -51,7 +51,7 @@ class FROGdar:
 
     def isValidData(self):
         return (
-            self.rangeBuffer.lengthFiltered() >= BUFFERLEN
+            self.rangeBuffer._isValidData()
             and self.targetRange is not None
         )
 
@@ -75,7 +75,7 @@ class FROGdar:
         if self.enabled:
             # stream data into our counter
             self.rangeBuffer.append(self.getSensorData())
-            if self.rangeBuffer.lengthFiltered() > 0:
+            if self.rangeBuffer._getBufferLength() > 0:
                 self.targetRange = self.rangeBuffer.average()
             else:
                 self.targetRange = None
