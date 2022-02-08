@@ -77,12 +77,12 @@ class FROGdar:
             return self.getBufferedSensorData() * SENSORUNITS_IN_INCHES
 
     @feedback(key="range_feet")
-    def getDistance(self):
+    def getDistanceFeet(self):
         if self.isValidData():
             return self.getBufferedSensorData() * SENSORUNITS_IN_FEET
 
     @feedback(key="range_meters")
-    def getDistance(self):
+    def getDistanceMeters(self):
         if self.isValidData():
             return self.getBufferedSensorData() * SENSORUNITS_IN_METERS
 
