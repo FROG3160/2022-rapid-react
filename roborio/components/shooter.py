@@ -13,7 +13,7 @@ from components.sensors import FROGdar
 
 # TODO Find out the Min/Max of the velocity and the tolerence for the Flywheel
 FLYWHEEL_MODE = ControlMode.PercentOutput
-FLYWHEEL_PID = TalonPID(0, p=0.4, f=0.0515)
+FLYWHEEL_PID = TalonPID(0, p=0, f=0.042)
 FLYWHEEL_VELOCITY = 0
 FLYWHEEL_MAX_VEL = 1  # Falcon ()
 FLYWHEEL_MAX_ACCEL = FLYWHEEL_MAX_VEL / 50
@@ -152,7 +152,7 @@ class FROGShooter:
         # set them here
         self.lowerFlywheel.motor.setInverted(TalonFXInvertType.Clockwise)
         self.upperFlywheel.motor.setInverted(TalonFXInvertType.CounterClockwise)
-        self.lowerFlywheel.motor.setSensorPhase(False)
+        self.lowerFlywheel.motor.setSensorPhase(True)
         self.upperFlywheel.motor.setSensorPhase(True)
         self.set_manual()
         self.enable()
