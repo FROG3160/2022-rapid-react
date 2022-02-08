@@ -2,6 +2,7 @@ from navx import AHRS
 from magicbot import feedback
 from ctre import CANifier
 from .common import Buffer
+import math 
 
 BUFFERLEN = 50
 
@@ -32,6 +33,8 @@ class FROGGyro:
     def setAngle(self, angle):
         self.gyro.setAngleAdjustment(angle)
 
+    def getRadiansCCW(self):
+        self.gyro.getYaw() * -math.pi / 180
 
 class FROGdar:
     canifier: CANifier
