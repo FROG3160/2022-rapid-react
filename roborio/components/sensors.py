@@ -6,6 +6,8 @@ from .common import Buffer
 BUFFERLEN = 50
 
 SENSORUNITS_IN_INCHES = 0.0394
+SENSORUNITS_IN_FEET = 0.00328
+SENSORUNITS_IN_METERS = 0.001
 
 class FROGGyro:
     def __init__(self):
@@ -59,13 +61,25 @@ class FROGdar:
     def getBufferedSensorData(self):
         return self.targetRange
 
-       
-        
     @feedback(key="range_inches")
     def getDistance(self):
         if self.isValidData():
             return self.getBufferedSensorData() * SENSORUNITS_IN_INCHES
 
+    @feedback(key="range_feet")
+    def getDistance(self):
+        if self.isValidData():
+            return self.getBufferedSensorData() * SENSORUNITS_IN_FEET
+
+    @feedback(key="range_meters")
+    def getDistance(self):
+        if self.isValidData():
+            return self.getBufferedSensorData() * SENSORUNITS_IN_METERS
+
+
+
+        
+    
     def execute(self):
         if self.enabled:
             # stream data into our counter
