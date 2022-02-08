@@ -1,13 +1,10 @@
 # To adjust targeting settings within Photon Vision, go to 10.31.60.3:5800 in browser while on robot network.
 # Expecting 15-20 fps with cargo tracking and 50-75 fps with goal tracking.
-# TODO: Verfify camera resolutions and FOV.
-# Cargo cam resolution is 340x240. Goal cam is resolution is 320x240.
+# Cargo cam resolution is 320x240. Goal cam is resolution is 640x480.
 
 
 import photonvision
 from .common import Buffer
-
-#TODO: Import Alliance Color
 from roborio.robot import FROGbot
 
 
