@@ -47,3 +47,6 @@ class FROGLED(AddressableLED):
     def apply(self):
         self.setData(self.data)
         
+class FROGStrip(AddressableLED):
+    def __init__(self, pwmChannel: int) -> None:
+        super().__init__(pwmChannel)
