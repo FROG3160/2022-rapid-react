@@ -3,11 +3,12 @@
 from ctre import WPI_CANCoder, WPI_TalonFX, CANifier
 import magicbot
 import wpilib
+from wpilib import PneumaticsControlModule, Solenoid, PneumaticsModuleType
 from components.drivetrain import SwerveModule, SwerveChassis
 from wpimath.geometry import Translation2d
 from components.driverstation import FROGStick, FROGBoxGunner
 from components.sensors import FROGGyro, FROGdar
-from components.shooter import FROGShooter, Flywheel
+from components.shooter import FROGShooter, Flywheel, Intake
 
 # robot characteristics
 # we are specifying inches and dividing by 12 to get feet,
@@ -17,6 +18,8 @@ trackwidth = 27.75 / 12  # feet between wheels side to side
 wheelbase = 21.75 / 12  # feet between wheels front to back
 
 kDeadzone = 0.05
+
+CTRE_PCM = PneumaticsModuleType.CTREPCM
 
 
 class FROGbot(magicbot.MagicRobot):
@@ -28,6 +31,7 @@ class FROGbot(magicbot.MagicRobot):
     lidar: FROGdar
     swerveChassis: SwerveChassis
     shooter: FROGShooter
+    intake: Intake
 
     swerveFrontLeft: SwerveModule
     swerveFrontRight: SwerveModule
@@ -87,8 +91,17 @@ class FROGbot(magicbot.MagicRobot):
         # CANifier for LIDAR
         self.lidar_canifier = CANifier(36)
 
+        # PCM
+        self.pcm = PneumaticsControlModule(1)
+        # Solenoids for shooter
+        self.intake_retrieve = Solenoid(CTRE_PCM, 0)
+        self.intake_hold = Solenoid(CTRE_PCM, 1)
+        self.intake_launch = Solenoid(CTRE_PCM, 2)
+
         # config for saitek joystick
-        self.driveStick = FROGStick(0, 0, 1, 3, 2)
+        # self.driveStick = FROGStick(0, 0, 1, 3, 2)
+        # config for Logitech Extreme 3D
+        self.driveStick = FROGStick(0, 0, 1, 2, 3)
         self.gunnerControl = FROGBoxGunner(1)
 
         self.field = wpilib.Field2d()
@@ -115,7 +128,16 @@ class FROGbot(magicbot.MagicRobot):
             self.shooter.lowerFlywheel.incrementSpeed()
         if self.gunnerControl.getXButtonReleased():
             self.shooter.lowerFlywheel.decrementSpeed()
-        
+
+        if self.gunnerControl.getLeftBumper():
+            self.intake.activateHold()
+        else:
+            self.intake.deactivateHold()
+
+        if self.gunnerControl.getRightBumper():
+            self.intake.activateLaunch()
+        else:
+            self.intake.deactivateLaunch()
 
         # Get driver controls
         vX, vY, vT = (
