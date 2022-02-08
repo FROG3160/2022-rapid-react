@@ -3,10 +3,12 @@
 from ctre import WPI_CANCoder, WPI_TalonFX, CANifier
 import magicbot
 import wpilib
+from wpilib import DriverStation
 from components.drivetrain import SwerveModule, SwerveChassis
 from wpimath.geometry import Translation2d
 from components.driverstation import FROGStick
 from components.sensors import FROGGyro, FROGdar
+
 
 # robot characteristics
 # we are specifying inches and dividing by 12 to get feet,
@@ -14,7 +16,6 @@ from components.sensors import FROGGyro, FROGdar
 # to get a correct Translation2d object
 trackwidth = 27.75 / 12  # feet between wheels side to side
 wheelbase = 21.75 / 12  # feet between wheels front to back
-
 kDeadzone = 0.05
 
 
@@ -29,6 +30,10 @@ class FROGbot(magicbot.MagicRobot):
     swerveFrontRight: SwerveModule
     swerveBackLeft: SwerveModule
     swerveBackRight: SwerveModule
+
+    def AllianceColor(self):
+
+        self.DriverStation.getAlliance()
 
     def createObjects(self):
         """Create motors and inputs"""

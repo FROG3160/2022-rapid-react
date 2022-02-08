@@ -8,7 +8,9 @@ import photonvision
 from .common import Buffer
 
 #TODO: Import Alliance Color
-#from autonomous import alliance 
+from roborio.robot import FROGbot
+
+
 
 # Values by which the the results are divided to give an output of -100 to 100.
 # LifeCam FOV is H62.8 x V37.9. Yaw is -31.4 to 31.4 degrees. Pitch is -18.9 to 18.9 degrees.
@@ -16,6 +18,10 @@ from .common import Buffer
 LC_X_div = 0.314
 LC_Y_div = 0.189
 PI_X_div = 0.267
+
+kRed = 0
+kBlue = 1
+kInvalid = 2
 
 class FROGVision:
 
@@ -35,16 +41,15 @@ class FROGVision:
 
         # Switches to specified pipeline depending on alliance color.
         # 2 is Blue Cargo, 1 is Red Cargo, and -1 is Driver Mode.
-        #TODO: Modify if statement to get alliance color
-        '''
-        if "alliance color" == blue():
+        
+        if FROGbot.AllianceColor == kBlue:
             self.CARGOcam.setPipelineIndex(2)
 
-        elif "alliance color" == red():
+        elif FROGbot.AllianceColor == kRed:
             self.CARGOcam.setPipelineIndex(1)
 
         else:
-            self.CARGOcam.setDriverMode(True)'''
+            self.CARGOcam.setDriverMode(True)
 
 
     def execute(self):
