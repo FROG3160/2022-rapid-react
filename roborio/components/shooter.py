@@ -1,4 +1,4 @@
-from re import T
+from wpilib import DriverStation, Solenoid
 from ctre import (
     WPI_TalonFX,
     FeedbackDevice,
@@ -15,10 +15,10 @@ from components.sensors import FROGdar
 FLYWHEEL_MODE = ControlMode.PercentOutput
 FLYWHEEL_PID = TalonPID(0, p=0.4, f=0.0515)
 FLYWHEEL_VELOCITY = 0
-FLYWHEEL_MAX_VEL = 1 # Falcon ()
+FLYWHEEL_MAX_VEL = 1  # Falcon ()
 FLYWHEEL_MAX_ACCEL = FLYWHEEL_MAX_VEL / 50
 FLYWHEEL_MAX_DECEL = -FLYWHEEL_MAX_ACCEL
-FLYWHEEL_INCREMENT = 0.1
+FLYWHEEL_INCREMENT = 0.025
 FLYWHEEL_VEL_TOLERANCE = 300
 FLYWHEEL_LOOP_RAMP = 0.25
 
@@ -71,7 +71,7 @@ class Flywheel:
         self.motor.configClosedloopRamp(FLYWHEEL_LOOP_RAMP)
 
     def setVelocity(self, velocity):
-        #self._controlMode = ControlMode.Velocity
+        # self._controlMode = ControlMode.Velocity
         self._velocity = velocity
 
     def incrementSpeed(self):
@@ -91,6 +91,36 @@ class Flywheel:
             self.motor.set(self._controlMode, self._velocity)
         else:
             self.motor.set(0)
+
+
+class Intake:
+    retrieve: Solenoid
+    hold: Solenoid
+    launch: Solenoid
+
+    def __init__(self):
+        pass
+
+    def activateRetrieve(self):
+        self.retrieve.set(True)
+
+    def deactivateRetrieve(self):
+        self.retrieve.set(False)
+
+    def activateHold(self):
+        self.hold.set(True)
+
+    def deactivateHold(self):
+        self.hold.set(False)
+
+    def activateLaunch(self):
+        self.launch.set(True)
+
+    def deactivateLaunch(self):
+        self.launch.set(False)
+
+    def execute(self):
+        pass
 
 
 class FROGShooter:
@@ -118,10 +148,12 @@ class FROGShooter:
         self.upperFlywheel.setVelocity(0)
 
     def setup(self):
+        # these settings are different for each motor, so we
+        # set them here
         self.lowerFlywheel.motor.setInverted(TalonFXInvertType.Clockwise)
         self.upperFlywheel.motor.setInverted(TalonFXInvertType.CounterClockwise)
         self.lowerFlywheel.motor.setSensorPhase(False)
-        self.upperFlywheel.motor.setSensorPhase(False)
+        self.upperFlywheel.motor.setSensorPhase(True)
         self.set_manual()
         self.enable()
 
