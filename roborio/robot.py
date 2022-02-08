@@ -121,13 +121,13 @@ class FROGbot(magicbot.MagicRobot):
 
         # Get gunner controls
         if self.gunnerControl.getYButtonReleased():
-            self.shooter.upperFlywheel.incrementSpeed()
+            self.shooter.incrementFlywheelSpeeds()
         if self.gunnerControl.getAButtonReleased():
-            self.shooter.upperFlywheel.decrementSpeed()
-        if self.gunnerControl.getBButtonReleased():
-            self.shooter.lowerFlywheel.incrementSpeed()
-        if self.gunnerControl.getXButtonReleased():
-            self.shooter.lowerFlywheel.decrementSpeed()
+            self.shooter.decrementFlywheelSpeeds()
+        # if self.gunnerControl.getBButtonReleased():
+        #     self.shooter.lowerFlywheel.incrementSpeed()
+        # if self.gunnerControl.getXButtonReleased():
+        #     self.shooter.lowerFlywheel.decrementSpeed()
 
         if self.gunnerControl.getLeftBumper():
             self.intake.activateHold()
