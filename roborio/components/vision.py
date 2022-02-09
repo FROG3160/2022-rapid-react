@@ -9,12 +9,12 @@ from roborio.robot import FROGbot
 
 
 
-# Values by which the the results are divided to give an output of -100 to 100.
+# Values by which the the results are divided to give an output of -1 to 1.
 # LifeCam FOV is H62.8 x V37.9. Yaw is -31.4 to 31.4 degrees. Pitch is -18.9 to 18.9 degrees.
 # PiCam horizontal FOV is 53.5. Yaw is -26.75 to 26.75 degrees.
-LC_X_div = 0.314
-LC_Y_div = 0.189
-PI_X_div = 0.267
+LC_X_div = 31.4
+LC_Y_div = 18.9
+PI_X_div = 26.7
 
 kRed = 0
 kBlue = 1
@@ -71,7 +71,7 @@ class FROGVision:
 
 
     # Yaw is left- and right+ degrees with center being 0
-    # Values are divided so as to make the final values between -100 and 100
+    # Values are divided so as to make the final values between -1 and 1
     def getGoalX(self):
         return (self.GoalTarget.getYaw() / PI_X_div)
 
