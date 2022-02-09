@@ -36,7 +36,7 @@ class FROGGyro:
         self.gyro.setAngleAdjustment(angle)
 
     def getRadiansCCW(self):
-        self.gyro.getYaw() * -math.pi / 180
+        return math.radians(-self.gyro.getYaw())
 
 class FROGdar:
     canifier: CANifier
