@@ -124,12 +124,14 @@ class FROGbot(magicbot.MagicRobot):
             wpilib.SmartDashboard.putData(self.field)
 
         self.driverstation = DriverStation
-        self.vision_allianceColor = self.driverstation.getAlliance()
+
+    def autonomousInit(self):
+        self.vision.setAllianceColor(self.driverstation.getAlliance())
 
     def teleopInit(self):
         """Called when teleop starts; optional"""
         self.swerveChassis.enable()
-        pass
+        self.vision.setAllianceColor(self.driverstation.getAlliance())
 
     def teleopPeriodic(self):
         """Called on each iteration of the control loop"""

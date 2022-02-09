@@ -1,4 +1,13 @@
 {
+  "HALProvider": {
+    "Other Devices": {
+      "Compressor[1]": {
+        "header": {
+          "open": true
+        }
+      }
+    }
+  },
   "NTProvider": {
     "types": {
       "/FMSInfo": "FMSInfo",
@@ -25,6 +34,14 @@
           "name": "2022 Default Field",
           "visible": true
         }
+      }
+    }
+  },
+  "NetworkTables": {
+    "components": {
+      "open": true,
+      "vision": {
+        "open": true
       }
     }
   }

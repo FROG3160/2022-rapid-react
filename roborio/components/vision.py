@@ -5,6 +5,7 @@
 import photonvision
 from .common import Buffer
 from wpilib import DriverStation
+from magicbot import feedback
 
 # Values by which the the results are divided to give an output of -1 to 1.
 # LifeCam FOV is H62.8 x V37.9. Yaw is -31.4 to 31.4 degrees. Pitch is -18.9 to 18.9 degrees.
@@ -19,9 +20,6 @@ kInvalid = DriverStation.Alliance.kInvalid
 
 
 class FROGVision:
-
-    allianceColor: DriverStation.Alliance
-
     def __init__(self):
 
         # Sets varible to specifed camera. Must match camera name on photon vision web interface.
@@ -32,6 +30,7 @@ class FROGVision:
         self.CargoYawBuff = Buffer(8)
         self.CargoPitchBuff = Buffer(8)
         self.GoalYawBuff = Buffer(5)
+        self.allianceColor = kInvalid
 
     def setup(self):
 
@@ -49,6 +48,7 @@ class FROGVision:
 
     def execute(self):
 
+        self.getAllianceColor()
         # Grabs the latest results from the Cameras and then get the best target.
         # Best target is chosen based off of the parameters on the photon vision web interface.
         self.CargoResults = self.CARGOcam.getLatestResult()
@@ -94,3 +94,11 @@ class FROGVision:
 
     def setDriverMode(self):
         return self.CARGOcam.setDriverMode(True)
+
+    def setAllianceColor(self, color):
+        self.allianceColor = color
+        self.setup()
+
+    @feedback()
+    def getAllianceColor(self):
+        return self.allianceColor
