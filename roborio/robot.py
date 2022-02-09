@@ -4,12 +4,18 @@ from ctre import WPI_CANCoder, WPI_TalonFX, CANifier
 import magicbot
 import wpilib
 
-from wpilib import PneumaticsControlModule, Solenoid, PneumaticsModuleType, DriverStation
+from wpilib import (
+    PneumaticsControlModule,
+    Solenoid,
+    PneumaticsModuleType,
+    DriverStation,
+)
 from components.drivetrain import SwerveModule, SwerveChassis
 from wpimath.geometry import Translation2d
 from components.driverstation import FROGStick, FROGBoxGunner
 from components.sensors import FROGGyro, FROGdar
 from components.shooter import FROGShooter, Flywheel, Intake
+from components.vision import FROGVision
 
 
 # robot characteristics
@@ -30,6 +36,7 @@ class FROGbot(magicbot.MagicRobot):
 
     gyro: FROGGyro
     lidar: FROGdar
+    vision: FROGVision
     swerveChassis: SwerveChassis
     shooter: FROGShooter
     intake: Intake
@@ -38,13 +45,13 @@ class FROGbot(magicbot.MagicRobot):
     swerveFrontRight: SwerveModule
     swerveBackLeft: SwerveModule
     swerveBackRight: SwerveModule
-      
+
     lowerFlywheel: Flywheel
     upperFlywheel: Flywheel
-      
-    def AllianceColor(self):
 
-        self.DriverStation.getAlliance()
+    def allianceColor(self):
+
+        self.driverstation.getAlliance()
 
     def createObjects(self):
         """Create motors and inputs"""
@@ -115,6 +122,9 @@ class FROGbot(magicbot.MagicRobot):
         # during simulation
         if not self.isSimulation():
             wpilib.SmartDashboard.putData(self.field)
+
+        self.driverstation = DriverStation
+        self.vision_allianceColor = self.driverstation.getAlliance()
 
     def teleopInit(self):
         """Called when teleop starts; optional"""
