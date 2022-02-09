@@ -2,10 +2,13 @@ from navx import AHRS
 from magicbot import feedback
 from ctre import CANifier
 from .common import Buffer
+import math 
 
 BUFFERLEN = 50
 
 SENSORUNITS_IN_INCHES = 0.0394
+SENSORUNITS_IN_FEET = 0.00328
+SENSORUNITS_IN_METERS = 0.001
 
 
 class FROGGyro:
@@ -32,9 +35,11 @@ class FROGGyro:
     def setAngle(self, angle):
         self.gyro.setAngleAdjustment(angle)
 
+    def getRadiansCCW(self):
+        return math.radians(-self.gyro.getYaw())
 
 class FROGdar:
-    pwm_sensor: CANifier
+    canifier: CANifier
 
     def __init__(self):
         self.enabled = False
@@ -51,13 +56,13 @@ class FROGdar:
 
     def isValidData(self):
         return (
-            self.rangeBuffer.lengthFiltered() >= BUFFERLEN
+            self.rangeBuffer._isValidData()
             and self.targetRange is not None
         )
 
     @feedback(key="sensor_raw")
     def getSensorData(self):
-        errorcode, (val1, val2) = self.pwm_sensor.getPWMInput(
+        errorcode, (val1, val2) = self.canifier.getPWMInput(
             CANifier.PWMChannel.PWMChannel0
         )
         return val1
@@ -71,11 +76,25 @@ class FROGdar:
         if self.isValidData():
             return self.getBufferedSensorData() * SENSORUNITS_IN_INCHES
 
+    @feedback(key="range_feet")
+    def getDistanceFeet(self):
+        if self.isValidData():
+            return self.getBufferedSensorData() * SENSORUNITS_IN_FEET
+
+    @feedback(key="range_meters")
+    def getDistanceMeters(self):
+        if self.isValidData():
+            return self.getBufferedSensorData() * SENSORUNITS_IN_METERS
+
+
+
+        
+    
     def execute(self):
         if self.enabled:
             # stream data into our counter
             self.rangeBuffer.append(self.getSensorData())
-            if self.rangeBuffer.lengthFiltered() > 0:
+            if self.rangeBuffer._getBufferLength() > 0:
                 self.targetRange = self.rangeBuffer.average()
             else:
                 self.targetRange = None

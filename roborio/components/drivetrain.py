@@ -11,9 +11,11 @@ from ctre import (
     CANCoderConfiguration,
     BaseTalonPIDSetConfiguration,
 )
+from wpilib import Field2d
 from wpimath.geometry import Translation2d, Rotation2d
 from wpimath.kinematics import (
     SwerveDrive4Kinematics,
+    SwerveDrive4Odometry,
     ChassisSpeeds,
     SwerveModuleState,
 )
@@ -186,6 +188,7 @@ class SwerveChassis:
     swerveBackLeft: SwerveModule
     swerveBackRight: SwerveModule
     gyro: FROGGyro
+    field: Field2d
 
     def __init__(self):
         self.enabled = False
@@ -260,6 +263,10 @@ class SwerveChassis:
             *[m.location for m in self.modules]
         )
 
+        self.odometry = SwerveDrive4Odometry(
+            self.kinematics, Rotation2d.fromDegrees(self.gyro.getAngle())
+        )
+
     def execute(self):
         # execute is called each iteration
         # define what needs to happen if the
@@ -272,14 +279,18 @@ class SwerveChassis:
                 self.speeds, self.center
             )
             # normalizing wheel speeds so they don't exceed the
-            # maximum defined speed and zipping with the module the
-            # state belongs to.test
-            module_states = zip(
-                self.modules,
-                self.kinematics.desaturateWheelSpeeds(states, kMaxMetersPerSec),
+            # maximum defined speed
+            states = self.kinematics.desaturateWheelSpeeds(
+                states, kMaxMetersPerSec
             )
-            # send state to each associated module
-            for module, state in module_states:
+            # pairing the module with the state it should get and
+            # sending the state to the associated module
+
+            # updating odometry to keep track of position and angle
+            self.odometry.update(Rotation2d(self.gyro.getAngle()), *states)
+            self.field.setRobotPose(self.odometry.getPose())
+
+            for module, state in zip(self.modules, states):
                 module.setState(state)
 
         else:

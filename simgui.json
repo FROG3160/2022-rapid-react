@@ -1,0 +1,31 @@
+{
+  "NTProvider": {
+    "types": {
+      "/FMSInfo": "FMSInfo",
+      "/LiveWindow/Ungrouped/navX-Sensor[4]": "Gyro",
+      "/SmartDashboard/Autonomous Mode": "String Chooser",
+      "/SmartDashboard/Field": "Field2d"
+    },
+    "windows": {
+      "/SmartDashboard/Field": {
+        "Robot": {
+          "image": "2022-FRC-Robot.JPG",
+          "length": 0.551688015460968,
+          "width": 0.7040879726409912
+        },
+        "bottom": 900,
+        "height": 8.229599952697754,
+        "image": "2022-field.png",
+        "left": 74,
+        "right": 1774,
+        "top": 50,
+        "units": "feet",
+        "width": 16.459199905395508,
+        "window": {
+          "name": "2022 Default Field",
+          "visible": true
+        }
+      }
+    }
+  }
+}

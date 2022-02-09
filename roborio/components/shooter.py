@@ -1,5 +1,4 @@
-# components that are part of the shooter
-from roborio.components.sensors import FROGdar
+from wpilib import DriverStation, Solenoid
 from ctre import (
     WPI_TalonFX,
     FeedbackDevice,
@@ -7,24 +6,25 @@ from ctre import (
     NeutralMode,
     TalonFXInvertType,
 )
-from .common import TalonPID
 from magicbot import feedback
+from components.common import TalonPID
+from components.sensors import FROGdar
+
 
 # TODO Find out the Min/Max of the velocity and the tolerence for the Flywheel
 FLYWHEEL_MODE = ControlMode.Velocity
-FLYWHEEL_PID = TalonPID(0, p=0.4, f=0.0515)
-FLYWHEEL_VELOCITY = 7300
-FLYWHEEL_MAX_VEL = 25000
+FLYWHEEL_PID = TalonPID(0, p=0, f=0.042)
+FLYWHEEL_VELOCITY = 0
+FLYWHEEL_MAX_VEL = 22000  # Falcon ()
 FLYWHEEL_MAX_ACCEL = FLYWHEEL_MAX_VEL / 50
 FLYWHEEL_MAX_DECEL = -FLYWHEEL_MAX_ACCEL
-FLYWHEEL_INCREMENT = 500
-FLYWHEEL_VEL_TOLERANCE = 300
+FLYWHEEL_INCREMENT = 100
+FLYWHEEL_VEL_TOLERANCE = 100
 FLYWHEEL_LOOP_RAMP = 0.25
 
 
 class Flywheel:
-    flywheel_motor_top: WPI_TalonFX
-    flywheel_motor_bottom: WPI_TalonFX
+    motor: WPI_TalonFX
 
     def __init__(self):
         self.enabled = False
@@ -49,13 +49,8 @@ class Flywheel:
     def getVelocity(self):
         # sensor values are reversed.  we command a positive value and the
         # sensor shows a negative one, so we negate the output
-        return (
-            -self.flywheel_motor_top.getSelectedSensorVelocity(
-                FeedbackDevice.IntegratedSensor
-            ),
-            -self.flywheel_motor_bottom.getSelectedSensorVelocity(
-                FeedbackDevice.IntegratedSensor
-            ),
+        return -self.motor.getSelectedSensorVelocity(
+            FeedbackDevice.IntegratedSensor
         )
 
     @feedback(key="commanded")
@@ -64,65 +59,153 @@ class Flywheel:
 
     def setup(self):
         # Falcon500 motors use the integrated sensor
-        self.flywheel_motor_top.configSelectedFeedbackSensor(
+        self.motor.configSelectedFeedbackSensor(
             FeedbackDevice.IntegratedSensor, 0, 0
         )
-        self.flywheel_motor_bottom.configSelectedFeedbackSensor(
-            FeedbackDevice.IntegratedSensor, 0, 0
-        )
-        self.flywheel_motor_top.setSensorPhase(False)
-        self.flywheel_motor_bottom.setSensorPhase(False)
+        # self.motor.setSensorPhase(False)
         # = setInverted(True)
-        self.flywheel_motor_top.setInverted(TalonFXInvertType.CounterClockwise)
-        self.flywheel_motor_bottom.setInverted(TalonFXInvertType.Clockwise)
-        self.flywheel_motor_top.setNeutralMode(NeutralMode.Coast)
-        self.flywheel_motor_bottom.setNeutralMode(NeutralMode.Coast)
-        FLYWHEEL_PID.configTalon(self.flywheel_motor_top)
-        FLYWHEEL_PID.configTalon(self.flywheel_motor_bottom)
+        # self.motor.setInverted(TalonFXInvertType.CounterClockwise)
+        self.motor.setNeutralMode(NeutralMode.Coast)
+        FLYWHEEL_PID.configTalon(self.motor)
         # use closed loop ramp to accelerate smoothly
-        self.flywheel_motor_top.configClosedloopRamp(FLYWHEEL_LOOP_RAMP)
-        self.flywheel_motor_bottom.configClosedloopRamp(FLYWHEEL_LOOP_RAMP)
+        self.motor.configClosedloopRamp(FLYWHEEL_LOOP_RAMP)
 
     def setVelocity(self, velocity):
-        self._controlMode = ControlMode.Velocity
+        # self._controlMode = ControlMode.Velocity
+        if velocity > FLYWHEEL_MAX_VEL:
+            velocity = FLYWHEEL_MAX_VEL
+        elif velocity < 0:
+            velocity = 0
         self._velocity = velocity
+
+    def incrementSpeed(self):
+        velocity = self._velocity + FLYWHEEL_INCREMENT
+        self.setVelocity(velocity)
+
+    def decrementSpeed(self):
+        velocity = self._velocity - FLYWHEEL_INCREMENT
+        self.setVelocity(velocity)
+
+    def execute(self):
+        if self.enabled:
+            self.motor.set(self._controlMode, self._velocity)
+        else:
+            self.motor.set(0)
+
+
+class Intake:
+    retrieve: Solenoid
+    hold: Solenoid
+    launch: Solenoid
+
+    def __init__(self):
+        pass
+
+    def activateRetrieve(self):
+        self.retrieve.set(True)
+
+    def deactivateRetrieve(self):
+        self.retrieve.set(False)
+
+    def activateHold(self):
+        self.hold.set(True)
+
+    def deactivateHold(self):
+        self.hold.set(False)
+
+    def activateLaunch(self):
+        self.launch.set(True)
+
+    def deactivateLaunch(self):
+        self.launch.set(False)
+
+    def execute(self):
+        pass
 
 
 class FROGShooter:
     lidar: FROGdar
+    lowerFlywheel: Flywheel
+    upperFlywheel: Flywheel
 
     def __init__(self):
-        self.enabled = False
+        self._enable = False
+        self._automatic = False
+        self.ratio_lower = 5
+        self.ratio_upper = 5
+        self._flywheel_speeds = 0
 
     def enable(self):
-        self.enabled = True
+        self._enabled = True
+        self.lowerFlywheel.setVelocity(0)
+        self.upperFlywheel.setVelocity(0)
+        self.lowerFlywheel.enable()
+        self.upperFlywheel.enable()
 
     def set_automatic(self):
-        pass
+        self._automatic = True
 
     def set_manual(self):
-        pass
+        self._automatic = False
+        self.lowerFlywheel.setVelocity(0)
+        self.upperFlywheel.setVelocity(0)
+
+    def setup(self):
+        # these settings are different for each motor, so we
+        # set them here
+        self.lowerFlywheel.motor.setInverted(TalonFXInvertType.Clockwise)
+        self.upperFlywheel.motor.setInverted(TalonFXInvertType.CounterClockwise)
+        self.lowerFlywheel.motor.setSensorPhase(True)
+        self.upperFlywheel.motor.setSensorPhase(True)
+        self.set_manual()
+        self.enable()
 
     def disable(self):
-        pass
+        self._enabled = False
+        self.lowerFlywheel.disable()
+        self.upperFlywheel.disable()
 
+    def setFlywheelSpeeds(self, speed: int):
+        if speed > FLYWHEEL_MAX_VEL:
+            speed = FLYWHEEL_MAX_VEL
+        elif speed < 0:
+            speed = 0
+        self._flywheel_speeds = speed
+
+    def incrementFlywheelSpeeds(self):
+        self.setFlywheelSpeeds(self._flywheel_speeds + FLYWHEEL_INCREMENT)
+
+    def decrementFlywheelSpeeds(self):
+        self.setFlywheelSpeeds(self._flywheel_speeds - FLYWHEEL_INCREMENT)
+
+    def setLowerRatio(self, val: int):
+        self.ratio_lower = val
+
+    def setUpperRatio(self, val: int):
+        self.ratio_upper = val
+
+    @feedback()
+    def getLowerRatio(self):
+        return self.ratio_lower
+
+    @feedback()
+    def getUpperRatio(self):
+        return self.ratio_upper
+
+    @feedback()
     def getdistance(self):
         # get the value/distance from the lidar in inches
         return self.lidar.getDistance()
 
-    def incrementSpeed(self):
-        self._velocity += FLYWHEEL_INCREMENT
-        self.setVelocity(self._velocity)
-
-    def decrementSpeed(self):
-        self._velocity -= FLYWHEEL_INCREMENT
-        self.setVelocity(self._velocity)
-
     def execute(self):
-        if self.enabled:
-            self.flywheel_motor_top.set(self._controlMode, self._velocity)
-            self.flywheel_motor_bottom.set(self._controlMode, self._velocity)
+        if self._enabled:
+            if self._automatic:
+                # get value from self.getdistance() and adjust
+                # the speeds of the motors
+                pass
+            else:
+                self.lowerFlywheel.setVelocity(self._flywheel_speeds)
+                self.upperFlywheel.setVelocity(self._flywheel_speeds*(1/(self.ratio_lower/self.ratio_upper)))
 
-        else:
-            self.flywheel_motor_top.set(0)
-            self.flywheel_motor_bottom.set(0)
+                # run the motors at the speeds they already have
+                pass

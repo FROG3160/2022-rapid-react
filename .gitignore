@@ -127,10 +127,3 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
-simgui-ds.json
-simgui-window.json
-simgui.json
-imgui.ini
-.installer_config
-.Glass/glass.json
-.Glass/glass-window.json

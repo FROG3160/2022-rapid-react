@@ -20,6 +20,7 @@ from wpilib.simulation import SimDeviceSim
 from pyfrc.physics.units import units
 from pyfrc.physics.drivetrains import four_motor_swerve_drivetrain, linear_deadzone
 from components.drivetrain import kVelocityMultiplier, kMaxMetersPerSec
+from pyfrc.physics.visionsim import VisionSim, VisionSimTarget
 
 # import typing
 
@@ -62,6 +63,12 @@ class PhysicsEngine:
             6 * units.inch,                     # wheel diameter
         )
         """
+
+        targets = [VisionSimTarget(27, 13.5, 0, 360)]
+
+        self.vision = VisionSim(
+            targets, 51.37, 9, 54, 100, .05, physics_controller
+        )
         # # Drive motors
         # self.simFL_drive = self.simBot.swerveFrontLeft_drive.getSimCollection()
         # self.simFR_drive = self.simBot.swerveFrontRight_drive.getSimCollection()
@@ -153,7 +160,8 @@ class PhysicsEngine:
         speed = 16.3 #(max speed of the robot?)
         deadzone = 0.15
         
-        chassis_speeds = four_motor_swerve_drivetrain(lr_motor, rr_motor, lf_motor, rf_motor, lr_angle, rr_angle, lf_angle, rf_angle, x_wheelbase, y_wheelbase, speed, linear_deadzone(deadzone))
+        #chassis_speeds = four_motor_swerve_drivetrain(lr_motor, rr_motor, lf_motor, rf_motor, lr_angle, rr_angle, lf_angle, rf_angle, x_wheelbase, y_wheelbase, speed, linear_deadzone(deadzone))
+        chassis_speeds = self.robot.swerveChassis.speeds
         pose = self.physics_controller.drive(chassis_speeds, tm_diff)
 
         # this works to update a motor in the sim GUI, but only changing the percentOutput and motorOutputLeadVoltage attributes.

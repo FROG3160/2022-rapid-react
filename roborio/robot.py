@@ -3,11 +3,13 @@
 from ctre import WPI_CANCoder, WPI_TalonFX, CANifier
 import magicbot
 import wpilib
-from wpilib import DriverStation
+
+from wpilib import PneumaticsControlModule, Solenoid, PneumaticsModuleType, DriverStation
 from components.drivetrain import SwerveModule, SwerveChassis
 from wpimath.geometry import Translation2d
-from components.driverstation import FROGStick
+from components.driverstation import FROGStick, FROGBoxGunner
 from components.sensors import FROGGyro, FROGdar
+from components.shooter import FROGShooter, Flywheel, Intake
 
 
 # robot characteristics
@@ -18,19 +20,28 @@ trackwidth = 27.75 / 12  # feet between wheels side to side
 wheelbase = 21.75 / 12  # feet between wheels front to back
 kDeadzone = 0.05
 
+CTRE_PCM = PneumaticsModuleType.CTREPCM
+
 
 class FROGbot(magicbot.MagicRobot):
     """
     Initialize components here.
     """
+
     gyro: FROGGyro
+    lidar: FROGdar
     swerveChassis: SwerveChassis
+    shooter: FROGShooter
+    intake: Intake
 
     swerveFrontLeft: SwerveModule
     swerveFrontRight: SwerveModule
     swerveBackLeft: SwerveModule
     swerveBackRight: SwerveModule
-
+      
+    lowerFlywheel: Flywheel
+    upperFlywheel: Flywheel
+      
     def AllianceColor(self):
 
         self.DriverStation.getAlliance()
@@ -76,8 +87,34 @@ class FROGbot(magicbot.MagicRobot):
         self.swerveBackLeft_steerOffset = 0.0
         self.swerveBackRight_steerOffset = 0.0
 
+        # flywheel motors
+        self.lowerFlywheel_motor = WPI_TalonFX(41)
+        self.upperFlywheel_motor = WPI_TalonFX(42)
+
+        # TODO:  Add in CANdle on channel 35
+
+        # CANifier for LIDAR
+        self.lidar_canifier = CANifier(36)
+
+        # PCM
+        self.pcm = PneumaticsControlModule(1)
+        # Solenoids for shooter
+        self.intake_retrieve = Solenoid(CTRE_PCM, 0)
+        self.intake_hold = Solenoid(CTRE_PCM, 1)
+        self.intake_launch = Solenoid(CTRE_PCM, 2)
+
         # config for saitek joystick
-        self.driveStick = FROGStick(0, 0, 1, 3, 2)
+        # self.driveStick = FROGStick(0, 0, 1, 3, 2)
+        # config for Logitech Extreme 3D
+        self.driveStick = FROGStick(0, 0, 1, 2, 3)
+        self.gunnerControl = FROGBoxGunner(1)
+
+        self.field = wpilib.Field2d()
+        # simulation already places field data in SmartDashboard
+        # so we need to keep this from overwriting that data
+        # during simulation
+        if not self.isSimulation():
+            wpilib.SmartDashboard.putData(self.field)
 
     def teleopInit(self):
         """Called when teleop starts; optional"""
@@ -86,6 +123,28 @@ class FROGbot(magicbot.MagicRobot):
 
     def teleopPeriodic(self):
         """Called on each iteration of the control loop"""
+
+        # Get gunner controls
+        if self.gunnerControl.getYButtonReleased():
+            self.shooter.incrementFlywheelSpeeds()
+        if self.gunnerControl.getAButtonReleased():
+            self.shooter.decrementFlywheelSpeeds()
+        # if self.gunnerControl.getBButtonReleased():
+        #     self.shooter.lowerFlywheel.incrementSpeed()
+        # if self.gunnerControl.getXButtonReleased():
+        #     self.shooter.lowerFlywheel.decrementSpeed()
+
+        if self.gunnerControl.getLeftBumper():
+            self.intake.activateHold()
+        else:
+            self.intake.deactivateHold()
+
+        if self.gunnerControl.getRightBumper():
+            self.intake.activateLaunch()
+        else:
+            self.intake.deactivateLaunch()
+
+        # Get driver controls
         vX, vY, vT = (
             (self.driveStick.getFieldForward(), 0)[
                 abs(self.driveStick.getFieldForward()) < kDeadzone

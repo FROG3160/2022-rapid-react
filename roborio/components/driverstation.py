@@ -153,7 +153,6 @@ class FROGBoxSimplicity(XboxController):
         super().__init__(channel)
         self.button_latest = {}
         self.timer = wpilib.Timer
-        self.nt = NetworkTables.getTable("FROGBoxSimplicity_values")
 
     @feedback
     def get_speed(self):
@@ -172,9 +171,6 @@ class FROGBoxSimplicity(XboxController):
         self.update_nt("button_{}".format(num), val)
         return val
 
-    def update_nt(self, key, value):
-        self.nt.putNumber(key, value)
-
 
 class FROGBoxGunner(XboxController):
     DEADBAND = 0.1
@@ -187,9 +183,6 @@ class FROGBoxGunner(XboxController):
         super().__init__(channel)
         self.button_latest = {}
         self.timer = wpilib.Timer
-        self.nt = NetworkTables.getTables(
-            "compenents/driverstation?gunner_stick"
-        )
 
     @feedback(key="Elevation")
     def get_elevation(self):
@@ -223,6 +216,3 @@ class FROGBoxGunner(XboxController):
             self.setRumble(RIGHT_RUMBLE, 0)
         self.update_nt("button_pov", val)
         return val
-
-    def update_nt(self, key, value):
-        self.nt.putNumber(key, value)
