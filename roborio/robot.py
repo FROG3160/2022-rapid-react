@@ -125,19 +125,16 @@ class FROGbot(magicbot.MagicRobot):
         self.pose = Pose2d(Translation2d(2,2), Rotation2d(0))
         maxVelocity = 4.96824
         maxAcceleration = 2.48412
-        trajectoryConfig = trajectory.TrajectoryConfig(self.config[maxVelocity], self.config[maxAcceleration])
+        robotDimensions = {
+            trackwidth,
+            wheelbase
+        }
+        trajectoryConfig = trajectory.TrajectoryConfig(self.config[maxVelocity], self.config[maxAcceleration], self.config[robotDimensions], )
         trajectoryConfig.setKinematics(self.SwerveDrive4Kinematics.kinematics)
-        
 
 
-        
-        
 
-    
-    
-   
         
-
     def teleopPeriodic(self):
         """Called on each iteration of the control loop"""
 
