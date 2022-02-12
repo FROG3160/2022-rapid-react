@@ -1,5 +1,6 @@
 from collections import deque
-
+from wpilib import Joystick
+import math
 
 class Buffer(deque):
     def __init__(self, size, validLength=1):
@@ -60,3 +61,19 @@ class TalonPID:
         motor_control.config_kD(self.slot, self.d, 0)
         motor_control.config_kF(self.slot, self.f, 0)
         motor_control.config_IntegralZone(self.slot, self.iZone, 0)
+
+
+class PowerCurve:
+
+    def __init__(self):
+        self.power = self.setPower
+        self.value = self.setValue
+
+    def setPower(self):
+        self.setPower = Joystick.getThrottle()
+
+    def setValue(self):
+        self.setValue = Joystick.getY()
+
+    def __call__(self):
+        return math.pow(self.value ** self.power)
