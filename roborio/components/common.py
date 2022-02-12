@@ -1,6 +1,6 @@
 from collections import deque
 import math
-from pyfrc.physics.units import units
+#from pyfrc.physics.units import units
 
 
 class Buffer(deque):
@@ -77,31 +77,31 @@ class TalonPID:
         motor_control.config_IntegralZone(self.slot, self.iZone, 0)
 
 
-class MGWAssembly:
-    def __init__(self, gear_stages: list, motor_rpm: int, diameter:int, cpr: int):
-        self.gearing = math.prod(gear_stages)
-        self.motor_rpm = motor_rpm
-        self.diameter = diameter
-        self.cpr = cpr
-        self.circumference = math.pi * self.diameter
+# class MGWAssembly:
+#     def __init__(self, gear_stages: list, motor_rpm: int, diameter:int, cpr: int):
+#         self.gearing = math.prod(gear_stages)
+#         self.motor_rpm = motor_rpm
+#         self.diameter = diameter
+#         self.cpr = cpr
+#         self.circumference = math.pi * self.diameter
 
-    def speedToVelocity(self, speed):
-        wheel_rotations_sec = speed / self.circumference
-        motor_rotations_sec = wheel_rotations_sec / self.gearing
-        ticks_per_sec = motor_rotations_sec * self.cpr
-        return ticks_per_sec/10
+#     def speedToVelocity(self, speed):
+#         wheel_rotations_sec = speed / self.circumference
+#         motor_rotations_sec = wheel_rotations_sec / self.gearing
+#         ticks_per_sec = motor_rotations_sec * self.cpr
+#         return ticks_per_sec/10
 
-    def velocityToSpeed(self, velocity):
-        ticks_per_sec = velocity * 10
-        motor_rotations_sec = ticks_per_sec / self.cpr
-        wheel_rotations_sec = motor_rotations_sec * self.gearing
-        return wheel_rotations_sec * self.circumference
+#     def velocityToSpeed(self, velocity):
+#         ticks_per_sec = velocity * 10
+#         motor_rotations_sec = ticks_per_sec / self.cpr
+#         wheel_rotations_sec = motor_rotations_sec * self.gearing
+#         return wheel_rotations_sec * self.circumference
         
 
 
-if __name__ == "__main__":
-    wheel = MGWAssembly([(14.0 / 50.0), (27.0 / 17.0),(15.0 / 45.0)], 6380, 0.10033, 2048)
-    pass
+# if __name__ == "__main__":
+#     wheel = MGWAssembly([(14.0 / 50.0), (27.0 / 17.0),(15.0 / 45.0)], 6380, 0.10033, 2048)
+#     pass
 
 # need linear velocity to falcon velocity/100ms
 # need velocity/100ms to linear velocity
