@@ -48,6 +48,19 @@ def remap(val, OldMin, OldMax, NewMin, NewMax):
     return (((val - OldMin) * (NewMax - NewMin)) / (OldMax - OldMin)) + NewMin
 
 
+class Rescale:
+
+    def __init__(self, original_scale: tuple[float, float], new_scale: tuple[float, float]) -> None:
+        self.orig_min, self.orig_max = original_scale
+        self.new_min, self.new_max = new_scale
+
+    def __call__(self, value):
+        return (((value - self.orig_min) * (self.new_max - self.new_min)) / (self.orig_max - self.orig_min)) + self.new_min
+
+    def setNewMax(self, value: float):
+        self.new_max = value
+
+
 class TalonPID:
     """Class that holds contants for PID controls"""
 
@@ -99,7 +112,8 @@ class TalonPID:
         
 
 
-# if __name__ == "__main__":
+if __name__ == "__main__":
+    pass
 #     wheel = MGWAssembly([(14.0 / 50.0), (27.0 / 17.0),(15.0 / 45.0)], 6380, 0.10033, 2048)
 #     pass
 
