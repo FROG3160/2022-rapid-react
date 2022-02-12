@@ -5,10 +5,12 @@ import magicbot
 import wpilib
 from wpilib import PneumaticsControlModule, Solenoid, PneumaticsModuleType
 from components.drivetrain import SwerveModule, SwerveChassis
-from wpimath.geometry import Translation2d
+from wpimath.geometry import Translation2d, Rotation2d, Pose2d
 from components.driverstation import FROGStick, FROGBoxGunner
 from components.sensors import FROGGyro, FROGdar
 from components.shooter import FROGShooter, Flywheel, Intake
+from components import drivetrain
+import wpimath
 
 # robot characteristics
 # we are specifying inches and dividing by 12 to get feet,
@@ -116,6 +118,19 @@ class FROGbot(magicbot.MagicRobot):
         self.swerveChassis.enable()
         pass
 
+    def autonomousInit(self):
+        self.automodes.start()
+        self.pose = Pose2d(Translation2d(2,2), Rotation2d(0))
+        trajectoryConfig = wpimath.trajectory.TrajectoryConfig.maxVelocity((Pose2d, 0, 4.96824)), minMaxAcceleration((Pose2d, 0, 0, 2.48412))
+        trajectoryConfig.setKinematics(self.driveTrain.kinematics)
+
+        
+        
+
+    
+    
+    
+    
     def teleopPeriodic(self):
         """Called on each iteration of the control loop"""
 
