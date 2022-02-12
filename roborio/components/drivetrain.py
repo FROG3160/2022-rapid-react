@@ -58,10 +58,11 @@ cfgSteerMotor.remoteFilter0.remoteSensorSource = RemoteSensorSource.CANCoder
 cfgSteerMotor.primaryPID = BaseTalonPIDSetConfiguration(
     FeedbackDevice.RemoteSensor0
 )
-cfgSteerMotor.slot0.kP = 0.2
-cfgSteerMotor.slot0.kI = 0.0
-cfgSteerMotor.slot0.kD = 0.2
+cfgSteerMotor.slot0.kP = 0.8
+cfgSteerMotor.slot0.kI = 0.0016
+cfgSteerMotor.slot0.kD = 0.0
 cfgSteerMotor.slot0.kF = 0.0
+cfgSteerMotor.slot0.allowableClosedloopError = 5
 
 # Drive Motor base config
 # TODO: Tune and adjust PID
@@ -70,10 +71,10 @@ cfgDriveMotor.initializationStrategy = SensorInitializationStrategy.BootToZero
 cfgDriveMotor.primaryPID = BaseTalonPIDSetConfiguration(
     FeedbackDevice.IntegratedSensor
 )
-cfgDriveMotor.slot0.kP = 0.3
+cfgDriveMotor.slot0.kP = 0.0
 cfgDriveMotor.slot0.kI = 0.0
-cfgDriveMotor.slot0.kD = 0.4
-cfgDriveMotor.slot0.kF = 0.0
+cfgDriveMotor.slot0.kD = 0.0
+cfgDriveMotor.slot0.kF = 0.058
 
 
 class SwerveModule:
@@ -132,7 +133,10 @@ class SwerveModule:
         # configure steer motor
 
         # configure CANCoder
-        self.encoder.configAllSettings(cfgSteerEncoder)
+        # No worky: self.encoder.configAllSettings(cfgSteerEncoder)
+        self.encoder.configAbsoluteSensorRange(AbsoluteSensorRange.Signed_PlusMinus180)
+        self.encoder.configSensorDirection(False)
+        self.encoder.configSensorInitializationStrategy(SensorInitializationStrategy.BootToAbsolutePosition)
         # adjust 0 degree point with offset
         self.encoder.configMagnetOffset(self.steerOffset)
 
@@ -147,7 +151,11 @@ class SwerveModule:
         #   - confirm this is the proper method
         # configure Falcon to use Remote Feedback 0
         # self.steer.configSelectedFeedbackSensor(FeedbackDevice.RemoteSensor0)
-
+        self.steer.configIntegratedSensorInitializationStrategy(SensorInitializationStrategy.BootToAbsolutePosition)
+        self.steer.configIntegratedSensorAbsoluteRange(AbsoluteSensorRange.Signed_PlusMinus180)
+        self.steer.setSelectedSensorPosition(0)
+        self.steer.configSelectedFeedbackSensor(FeedbackDevice.RemoteSensor0)
+        self.steer.setSensorPhase(True)
         # configure drive motor
         self.drive.configAllSettings(cfgDriveMotor)
         self.drive.setInverted(TalonFXInvertType.Clockwise)
@@ -169,7 +177,7 @@ class SwerveModule:
             # and determine if the value needs to be inverted or not
             # since the angle coming from the SwerveModuleState is
             # positive to the left (counter-clockwise)
-            self.steer.set(POSITION_MODE, self.state.angle.degrees())
+            self.steer.set(POSITION_MODE, self.state.angle.degrees() * (4096/360))
             # set velocity for Falcon to ticks/100ms
             self.drive.set(
                 VELOCITY_MODE, self.state.speed * kVelocityMultiplier
