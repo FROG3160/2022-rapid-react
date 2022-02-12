@@ -35,11 +35,12 @@ kMaxRevolutionsPerSec = 2
 kMaxRadiansPerSec = kMaxRevolutionsPerSec * 2 * math.pi
 
 kWheelDiameter = 0.1016  # in meters  TODO: Confirm this value
-kTicksPerRotation = 2048
+kFalconTicksPerRotation = 2048
+kCANCoderTicksPerRotation = 4096
 # the multiple of 10 in the divisor is to get to how many ticks per 100ms
 # or 1/10th of a second.  Multiplying the speed of SwerveModuleState by
 # this multiplier will give us the velocity to give the TalonFX in ticks/100ms
-kVelocityMultiplier = kTicksPerRotation / (10 * kWheelDiameter * math.pi)
+kVelocityMultiplier = kFalconTicksPerRotation / (10 * kWheelDiameter * math.pi)
 
 # CANCoder base config
 # Offset will be different for each module and will need to be
@@ -111,6 +112,13 @@ class SwerveModule:
     def getStateSpeed(self):
         return self.state.speed
 
+    @feedback()
+    def getSteerEncoderCommanded(self):
+        return self.degreesToTicks(self.state.angle.degrees())
+
+    def degreesToTicks(self, degrees: float) -> float:
+        return degrees * (kCANCoderTicksPerRotation/360)
+
     # TODO: Determine which way we want these
     # to read.  Right now they are inverted
     # to visually show positive angles to the
@@ -177,7 +185,7 @@ class SwerveModule:
             # and determine if the value needs to be inverted or not
             # since the angle coming from the SwerveModuleState is
             # positive to the left (counter-clockwise)
-            self.steer.set(POSITION_MODE, self.state.angle.degrees() * (4096/360))
+            self.steer.set(POSITION_MODE, self.degreesToTicks(self.state.angle.degrees()))
             # set velocity for Falcon to ticks/100ms
             self.drive.set(
                 VELOCITY_MODE, self.state.speed * kVelocityMultiplier
