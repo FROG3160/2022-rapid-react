@@ -28,15 +28,17 @@ class FROGGyro:
 
     def execute(self):
         pass
-
+    
+    @feedback()
     def getAngle(self):
         return self.gyro.getAngle()
 
     def setAngle(self, angle):
         self.gyro.setAngleAdjustment(angle)
 
+    @feedback
     def getRadiansCCW(self):
-        return math.radians(-self.gyro.getYaw())
+        return math.radians(self.gyro.getYaw())
 
 class FROGdar:
     canifier: CANifier
