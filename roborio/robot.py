@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
 
+from asyncio.tasks import _T1
 from ctre import WPI_CANCoder, WPI_TalonFX, CANifier
 import magicbot
 import wpilib
 from wpilib import PneumaticsControlModule, Solenoid, PneumaticsModuleType
 from components.drivetrain import SwerveModule, SwerveChassis
+import wpimath
 from wpimath.geometry import Translation2d, Rotation2d, Pose2d
 from wpimath.kinematics import SwerveDrive4Kinematics,SwerveDrive4Odometry
 from components.driverstation import FROGStick, FROGBoxGunner
 from components.sensors import FROGGyro, FROGdar
 from components.shooter import FROGShooter, Flywheel, Intake
 from components import drivetrain
-import wpimath
 from wpimath import trajectory
 
 # robot characteristics
@@ -125,20 +126,38 @@ class FROGbot(magicbot.MagicRobot):
         self.pose = Pose2d(Translation2d(2,2), Rotation2d(0))
         maxVelocity = 4.96824
         maxAcceleration = 2.48412
+        radianValueFor10dgrs = 0.17453293
         robotDimensions = {
             trackwidth,
             wheelbase
         }
-        trajectoryConfig = trajectory.TrajectoryConfig(self.config[maxVelocity], self.config[maxAcceleration], self.config[robotDimensions], )
-        trajectoryConfig.setKinematics(self.SwerveDrive4Kinematics.kinematics)
+        addConstraint_MinMaxAcceleration = (self, [Pose2d], self, [radianValueFor10dgrs], self, [maxAcceleration]) ;wpimath._controls._controls.constraint.TrajectoryConstraint.MinMax 
+        ''' The " -> " symbol is supposed to be between ) and wpimath.'''
+        setStartVelocity = 2
+        startVelocity = 2
+        setEndVelocity = 0
+        endVelocity = 0
+        setReversed = False
+        isReversed = False
+        trajectoryConfig = trajectory.TrajectoryConfig(self, [maxVelocity], self, [maxAcceleration], self, [setStartVelocity], [startVelocity], [setEndVelocity], [endVelocity], self, [addConstraint_MinMaxAcceleration])
+        (self.SwerveDrive4Kinematics.kinematics)
+        trajectoryConfig.setKinematics(self, [SwerveDrive4Kinematics])
+        
+        self.trajectory = wpimath.trajectory.TrajectoryGenerator.generateTrajectory(
+			wpimath.geometry.Pose2d(0, 0, wpimath.geometry.Rotation2d.fromDegrees(0)), # Starting position
+			[wpimath.geometry.Translation2d(-1,2), wpimath.geometry.Translation2d(-2,3), wpimath.geometry.Translation2d(-3,2), wpimath.geometry.Translation2d(-2,1)], # Pass through these points
+			wpimath.geometry.Pose2d(0, 0, wpimath.geometry.Rotation2d.fromDegrees(0)), # Ending position
+			trajectoryConfig)
+
+        
 
 
+        """Called on each iteration of the control loop"""
+
+        # Get gunner controlsotDimensions])
 
         
     def teleopPeriodic(self):
-        """Called on each iteration of the control loop"""
-
-        # Get gunner controls
         if self.gunnerControl.getYButtonReleased():
             self.shooter.incrementFlywheelSpeeds()
         if self.gunnerControl.getAButtonReleased():
