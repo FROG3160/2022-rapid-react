@@ -1,6 +1,5 @@
 from collections import deque
 import math
-#from pyfrc.physics.units import units
 
 
 class Buffer(deque):
@@ -11,7 +10,7 @@ class Buffer(deque):
             size (int): Maximum size of the buffer.  The largest number of values
                 the buffer will keep.
             validLength (int, optional): The number of values in the buffer needed
-                to treat the amount of data as valid. average() returns None if 
+                to treat the amount of data as valid. average() returns None if
                 there aren't enough values.  Defaults to 1.
         """
         self.validLength = validLength
@@ -49,13 +48,38 @@ def remap(val, OldMin, OldMax, NewMin, NewMax):
 
 
 class Rescale:
+    def __init__(
+        self,
+        original_scale: tuple[float, float],
+        new_scale: tuple[float, float],
+        deadband: float = 0.0,
+    ) -> None:
+        """Class for transferring a value from one scale to another
 
-    def __init__(self, original_scale: tuple[float, float], new_scale: tuple[float, float]) -> None:
-        self.orig_min, self.orig_max = original_scale
+        Args:
+            original_scale (tuple[float, float]): the original scale the the given value will fall in.
+                Expressed as a tuple: (minimum: float, maximum: float)
+            new_scale (tuple[float, float]): the new scale the given value wil fall in.
+                Expressed as a tuple: (minimum: float, maximum: float)
+            deadband (0.0): A deadband value, if desired, defaults to 0.0.  If a deadband is specified,
+                the deadband is subtracted from the original value and then matched to the new scale.  If
+                the value is within the deadband, 0 is returned.
+        """
+        self.orig_min = original_scale[0] + deadband
+        self.orig_max = original_scale[1] - deadband
         self.new_min, self.new_max = new_scale
+        self.deadband = deadband
 
     def __call__(self, value):
-        return (((value - self.orig_min) * (self.new_max - self.new_min)) / (self.orig_max - self.orig_min)) + self.new_min
+        value = (
+            math.copysign(abs(value) - self.deadband, value)
+            if abs(value) > self.deadband
+            else 0
+        )
+        return (
+            ((value - self.orig_min) * (self.new_max - self.new_min))
+            / (self.orig_max - self.orig_min)
+        ) + self.new_min
 
     def setNewMax(self, value: float):
         self.new_max = value
@@ -90,51 +114,31 @@ class TalonPID:
         motor_control.config_IntegralZone(self.slot, self.iZone, 0)
 
 
-# class MGWAssembly:
-#     def __init__(self, gear_stages: list, motor_rpm: int, diameter:int, cpr: int):
-#         self.gearing = math.prod(gear_stages)
-#         self.motor_rpm = motor_rpm
-#         self.diameter = diameter
-#         self.cpr = cpr
-#         self.circumference = math.pi * self.diameter
+class DriveUnit:
+    def __init__(
+        self, gear_stages: list, motor_rpm: int, diameter: int, cpr: int
+    ):
+        self.gearing = math.prod(gear_stages)
+        self.motor_rpm = motor_rpm
+        self.cpr = cpr
+        self.circumference = math.pi * diameter
 
-#     def speedToVelocity(self, speed):
-#         wheel_rotations_sec = speed / self.circumference
-#         motor_rotations_sec = wheel_rotations_sec / self.gearing
-#         ticks_per_sec = motor_rotations_sec * self.cpr
-#         return ticks_per_sec/10
+    def speedToVelocity(self, speed):
+        wheel_rotations_sec = speed / self.circumference
+        motor_rotations_sec = wheel_rotations_sec / self.gearing
+        ticks_per_sec = motor_rotations_sec * self.cpr
+        return ticks_per_sec / 10
 
-#     def velocityToSpeed(self, velocity):
-#         ticks_per_sec = velocity * 10
-#         motor_rotations_sec = ticks_per_sec / self.cpr
-#         wheel_rotations_sec = motor_rotations_sec * self.gearing
-#         return wheel_rotations_sec * self.circumference
-        
+    def velocityToSpeed(self, velocity):
+        ticks_per_sec = velocity * 10
+        motor_rotations_sec = ticks_per_sec / self.cpr
+        wheel_rotations_sec = motor_rotations_sec * self.gearing
+        return wheel_rotations_sec * self.circumference
 
 
 if __name__ == "__main__":
+    wheel = DriveUnit(
+        [(14.0 / 50.0), (27.0 / 17.0), (15.0 / 45.0)], 6380, 0.10033, 2048
+    )
+    scaled = Rescale((-1, 1), (-180, 180), 0.2)
     pass
-#     wheel = MGWAssembly([(14.0 / 50.0), (27.0 / 17.0),(15.0 / 45.0)], 6380, 0.10033, 2048)
-#     pass
-
-# need linear velocity to falcon velocity/100ms
-# need velocity/100ms to linear velocity
-
-# linear meters/sec to wheel rotations sec
-# wheel rotations/sec to motor rotations sec
-# motor rotations/sec to ticks per 100ms
-
-# public static final ModuleConfiguration MK4_L2 = new ModuleConfiguration(
-#         0.10033,
-#         (14.0 / 50.0) * (27.0 / 17.0) * (15.0 / 45.0),
-#         true,
-#         (15.0 / 32.0) * (10.0 / 60.0),
-#         true
-# );
-
-# public static final ModuleConfiguration MK4_L3 = new ModuleConfiguration(
-#         0.10033,
-#         (14.0 / 50.0) * (28.0 / 16.0) * (15.0 / 45.0),
-#         true,
-#         (15.0 / 32.0) * (10.0 / 60.0),
-#         true
