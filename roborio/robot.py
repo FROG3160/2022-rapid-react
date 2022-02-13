@@ -16,6 +16,7 @@ from components.driverstation import FROGStick, FROGBoxGunner
 from components.sensors import FROGGyro, FROGdar
 from components.shooter import FROGShooter, Flywheel, Intake
 from components.vision import FROGVision
+from components.common import Rescale
 
 
 # robot characteristics
@@ -24,8 +25,8 @@ from components.vision import FROGVision
 # to get a correct Translation2d object
 trackwidth = 27.75 / 12  # feet between wheels side to side
 wheelbase = 21.75 / 12  # feet between wheels front to back
-kDeadzone = 0.05
-
+kDeadzone = 0.2
+joystickAxisDeadband = Rescale((-1, 1), (-0.5, 0.5), 0.15)
 CTRE_PCM = PneumaticsModuleType.CTREPCM
 
 
@@ -89,9 +90,9 @@ class FROGbot(magicbot.MagicRobot):
             -trackwidth / 2,
         )
 
-        self.swerveFrontLeft_steerOffset = 30.4101563
+        self.swerveFrontLeft_steerOffset = 13.008
         self.swerveFrontRight_steerOffset = -175.166
-        self.swerveBackLeft_steerOffset = 21.3574219
+        self.swerveBackLeft_steerOffset = 22.764
         self.swerveBackRight_steerOffset = -43.242
 
         # flywheel motors
@@ -158,17 +159,14 @@ class FROGbot(magicbot.MagicRobot):
 
         # Get driver controls
         vX, vY, vT = (
-            (self.driveStick.getFieldForward(), 0)[
-                abs(self.driveStick.getFieldForward()) < kDeadzone
-            ],
-            (self.driveStick.getFieldLeft(), 0)[
-                abs(self.driveStick.getFieldLeft()) < kDeadzone
-            ],
-            (self.driveStick.getFieldRotation(), 0)[
-                abs(self.driveStick.getFieldRotation()) < kDeadzone
-            ],
+            joystickAxisDeadband(self.driveStick.getFieldForward()),
+            joystickAxisDeadband(self.driveStick.getFieldLeft()),
+            joystickAxisDeadband(self.driveStick.getFieldRotation())
         )
         self.swerveChassis.field_oriented_drive(vX, vY, vT)
+
+        if self.driveStick.getTrigger():
+            self.gyro.resetGyro()
 
     def testInit(self):
         """Called when test mode starts; optional"""
