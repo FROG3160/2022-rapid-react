@@ -26,7 +26,7 @@ from components.common import Rescale
 trackwidth = 27.75 / 12  # feet between wheels side to side
 wheelbase = 21.75 / 12  # feet between wheels front to back
 kDeadzone = 0.2
-joystickAxisDeadband = Rescale((-1, 1), (-0.5, 0.5), 0.15)
+joystickAxisDeadband = Rescale((-1, 1), (-1, 1), 0.15)
 CTRE_PCM = PneumaticsModuleType.CTREPCM
 
 
@@ -161,9 +161,10 @@ class FROGbot(magicbot.MagicRobot):
         vX, vY, vT = (
             joystickAxisDeadband(self.driveStick.getFieldForward()),
             joystickAxisDeadband(self.driveStick.getFieldLeft()),
-            joystickAxisDeadband(self.driveStick.getFieldRotation())
+            joystickAxisDeadband(self.driveStick.getFieldRotation()) ** 3
         )
-        self.swerveChassis.field_oriented_drive(vX, vY, vT)
+        if vX or vY or vT:
+            self.swerveChassis.field_oriented_drive(vX, vY, vT)
 
         if self.driveStick.getTrigger():
             self.gyro.resetGyro()
