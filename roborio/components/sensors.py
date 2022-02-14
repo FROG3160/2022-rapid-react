@@ -15,7 +15,9 @@ class FROGGyro:
     def __init__(self):
         # TODO Make sure if we need this.
         self.gyro = AHRS.create_spi()
+        #self.field_heading = 360-242
         self.gyro.reset()
+        #self.gyro.setAngleAdjustment(-self.field_heading)
 
     @feedback(key="heading")
     def getHeading(self):
@@ -36,9 +38,18 @@ class FROGGyro:
     def setAngle(self, angle):
         self.gyro.setAngleAdjustment(angle)
 
-    @feedback
+    @feedback()
     def getRadiansCCW(self):
         return math.radians(self.gyro.getYaw())
+
+    @feedback()
+    def getCompass(self):
+        return self.gyro.getCompassHeading()
+
+    @feedback()
+    def getAngleAdjustment(self):
+        return self.gyro.getAngleAdjustment()
+
 
 class FROGdar:
     canifier: CANifier
