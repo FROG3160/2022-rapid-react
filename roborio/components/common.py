@@ -3,7 +3,6 @@ import math
 from wpimath.kinematics import SwerveModuleState
 from wpimath.geometry import Rotation2d
 
-
 class Buffer(deque):
     def __init__(self, size: int, validLength: int = 1):
         """Constructor for Buffer
@@ -114,6 +113,16 @@ class TalonPID:
         motor_control.config_kD(self.slot, self.d, 0)
         motor_control.config_kF(self.slot, self.f, 0)
         motor_control.config_IntegralZone(self.slot, self.iZone, 0)
+
+class PowerCurve:
+    def __init__(self, power):
+        self.setPower(power)
+
+    def setPower(self, power):
+        self.power = power
+        
+    def __call__(self, value):
+        return math.pow(value. self.power)
 
 
 class DriveUnit:
