@@ -145,20 +145,20 @@ class PhysicsEngine:
         # TODO: calculate all speeds and angles and pass them to four_motor_swerve_drivetrain()
         # chassis_speeds = four_motor_swerve_drivetrain()
         # pose = self.physics_controller.drive(*chassis_speeds)
-        lr_motor = self.robot.swerveBackLeft.getStateSpeed() / kMaxMetersPerSec
-        rr_motor = self.robot.swerveBackRight.getStateSpeed() / kMaxMetersPerSec
-        lf_motor = self.robot.swerveFrontLeft.getStateSpeed() / kMaxMetersPerSec
-        rf_motor = self.robot.swerveFrontRight.getStateSpeed() / kMaxMetersPerSec
+        # lr_motor = self.robot.swerveBackLeft.getStateSpeed() / kMaxMetersPerSec
+        # rr_motor = self.robot.swerveBackRight.getStateSpeed() / kMaxMetersPerSec
+        # lf_motor = self.robot.swerveFrontLeft.getStateSpeed() / kMaxMetersPerSec
+        # rf_motor = self.robot.swerveFrontRight.getStateSpeed() / kMaxMetersPerSec
 
-        lr_angle = self.robot.swerveBackLeft.getStateDegrees()
-        rr_angle = self.robot.swerveBackRight.getStateDegrees()
-        lf_angle = self.robot.swerveFrontLeft.getStateDegrees()
-        rf_angle = self.robot.swerveFrontRight.getStateDegrees()
+        # lr_angle = self.robot.swerveBackLeft.getStateDegrees()
+        # rr_angle = self.robot.swerveBackRight.getStateDegrees()
+        # lf_angle = self.robot.swerveFrontLeft.getStateDegrees()
+        # rf_angle = self.robot.swerveFrontRight.getStateDegrees()
 
-        x_wheelbase = 27.75/12
-        y_wheelbase = 21.75/12
-        speed = 16.3 #(max speed of the robot?)
-        deadzone = 0.15
+        # x_wheelbase = 27.75/12
+        # y_wheelbase = 21.75/12
+        # speed = 16.3 #(max speed of the robot?)
+        # deadzone = 0.15
         
         #chassis_speeds = four_motor_swerve_drivetrain(lr_motor, rr_motor, lf_motor, rf_motor, lr_angle, rr_angle, lf_angle, rf_angle, x_wheelbase, y_wheelbase, speed, linear_deadzone(deadzone))
         chassis_speeds = self.robot.swerveChassis.speeds

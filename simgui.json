@@ -1,4 +1,13 @@
 {
+  "HALProvider": {
+    "Other Devices": {
+      "Compressor[1]": {
+        "header": {
+          "open": true
+        }
+      }
+    }
+  },
   "NTProvider": {
     "types": {
       "/FMSInfo": "FMSInfo",
@@ -9,13 +18,13 @@
     "windows": {
       "/SmartDashboard/Field": {
         "Robot": {
-          "image": "C:\\Users\\brijarre\\projects\\git\\2022-rapid-react\\2022-FRC-Robot.JPG",
+          "image": "2022-FRC-Robot.JPG",
           "length": 0.551688015460968,
           "width": 0.7040879726409912
         },
         "bottom": 900,
         "height": 8.229599952697754,
-        "image": "C:\\Users\\brijarre\\projects\\git\\2022-rapid-react\\2022-field.png",
+        "image": "2022-field.png",
         "left": 74,
         "right": 1774,
         "top": 50,
@@ -25,6 +34,14 @@
           "name": "2022 Default Field",
           "visible": true
         }
+      }
+    }
+  },
+  "NetworkTables": {
+    "components": {
+      "open": true,
+      "vision": {
+        "open": true
       }
     }
   }
