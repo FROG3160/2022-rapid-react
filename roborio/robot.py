@@ -145,9 +145,11 @@ class FROGbot(magicbot.MagicRobot):
         
         self.trajectory = wpimath.trajectory.TrajectoryGenerator.generateTrajectory(
 			wpimath.geometry.Pose2d(0, 0, wpimath.geometry.Rotation2d.fromDegrees(0)), # Starting position
-			[wpimath.geometry.Translation2d(-2,1), wpimath.geometry.Translation2d(-3,2), wpimath.geometry.Translation2d(-2,3), wpimath.geometry.Translation2d(-1,2)], # Pass through these points
+			[wpimath.geometry.Translation2d(2,1), wpimath.geometry.Translation2d(3,2), wpimath.geometry.Translation2d(2,3), wpimath.geometry.Translation2d(1,2)], # Pass through these points
 			wpimath.geometry.Pose2d(0, 0, wpimath.geometry.Rotation2d.fromDegrees(0)), # Ending position
 			trajectoryConfig)
+        
+        
 
         
 
