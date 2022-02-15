@@ -3,6 +3,7 @@ import math
 from wpimath.kinematics import SwerveModuleState
 from wpimath.geometry import Rotation2d
 
+
 class Buffer(deque):
     def __init__(self, size: int, validLength: int = 1):
         """Constructor for Buffer
@@ -114,15 +115,16 @@ class TalonPID:
         motor_control.config_kF(self.slot, self.f, 0)
         motor_control.config_IntegralZone(self.slot, self.iZone, 0)
 
+
 class PowerCurve:
     def __init__(self, power):
         self.setPower(power)
 
     def setPower(self, power):
         self.power = power
-        
+
     def __call__(self, value):
-        return math.pow(value. self.power)
+        return math.pow(value.self.power)
 
 
 class DriveUnit:
@@ -185,5 +187,7 @@ if __name__ == "__main__":
     scaled = Rescale((-1, 1), (-180, 180), 0.2)
     for x in range(-180, 180, 15):
         for y in range(-180, 180, 15):
-            swerve_optimize(SwerveModuleState(0.5, Rotation2d.fromDegrees(y)),x)
+            swerve_optimize(
+                SwerveModuleState(0.5, Rotation2d.fromDegrees(y)), x
+            )
     pass
