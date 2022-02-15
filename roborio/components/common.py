@@ -1,5 +1,7 @@
 from collections import deque
 import math
+from wpimath.kinematics import SwerveModuleState
+from wpimath.geometry import Rotation2d
 
 
 class Buffer(deque):
@@ -136,9 +138,43 @@ class DriveUnit:
         return wheel_rotations_sec * self.circumference
 
 
+def swerve_optimize(state: SwerveModuleState, current_angle: float):
+    # we expect swerve_angle to be between -180 and 180
+    # get deltat between commanded angle and current angle
+    print("=====================\nOriginal Angle:", current_angle)
+    delta_angle, speed_invert = deltaAngle(state.angle.degrees(), current_angle)
+    new_angle = current_angle + delta_angle
+    new_speed = [state.speed, -state.speed][speed_invert]
+    # print("Requested Angle: ", state.angle.degrees())
+    # print("Angle Delta: ", delta_angle)
+    # print("New Angle: ", new_angle)
+    # print("----------")
+    # print("Requested Speed: ", state.speed)
+    # print("New Speed: ", new_speed)
+
+    return SwerveModuleState(new_speed, Rotation2d.fromDegrees(new_angle))
+
+
+def deltaAngle(new_angle, current_angle):
+    delta = new_angle - current_angle
+    reverse_speed = False
+    if abs(delta) > 90:
+        #
+        delta = delta - math.copysign(180, delta)
+        reverse_speed = True
+        if abs(delta) > 90:
+            delta = delta - math.copysign(180, delta)
+            reverse_speed = False
+
+    return (delta, reverse_speed)
+
+
 if __name__ == "__main__":
     wheel = DriveUnit(
         [(14.0 / 50.0), (27.0 / 17.0), (15.0 / 45.0)], 6380, 0.10033, 2048
     )
     scaled = Rescale((-1, 1), (-180, 180), 0.2)
+    for x in range(-180, 180, 15):
+        for y in range(-180, 180, 15):
+            swerve_optimize(SwerveModuleState(0.5, Rotation2d.fromDegrees(y)),x)
     pass
