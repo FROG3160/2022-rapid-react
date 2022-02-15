@@ -3,6 +3,7 @@
 from asyncio.tasks import _T1
 from ctre import WPI_CANCoder, WPI_TalonFX, CANifier
 import magicbot
+from pyparsing import trace_parse_action
 import wpilib
 from wpilib import PneumaticsControlModule, Solenoid, PneumaticsModuleType
 from components.drivetrain import SwerveModule, SwerveChassis
@@ -14,6 +15,7 @@ from components.sensors import FROGGyro, FROGdar
 from components.shooter import FROGShooter, Flywheel, Intake
 from components import drivetrain
 from wpimath import trajectory
+from wpimath.trajectory import constraint
 
 # robot characteristics
 # we are specifying inches and dividing by 12 to get feet,
@@ -127,32 +129,31 @@ class FROGbot(magicbot.MagicRobot):
         maxVelocity = 4.96824
         maxAcceleration = 2.48412
         radianValueFor10dgrs = 0.17453293
-        robotDimensions = {
-            trackwidth,
-            wheelbase
-        }
-        addConstraint_MinMaxAcceleration = (self, [Pose2d], self, [radianValueFor10dgrs], self, [maxAcceleration]) ;wpimath._controls._controls.constraint.TrajectoryConstraint.MinMax 
-        ''' The " -> " symbol is supposed to be between ) and wpimath.'''
-        setStartVelocity = 2
-        startVelocity = 2
-        setEndVelocity = 0
-        endVelocity = 0
-        setReversed = False
-        isReversed = False
-        trajectoryConfig = trajectory.TrajectoryConfig(self, [maxVelocity], self, [maxAcceleration], self, [setStartVelocity], [startVelocity], [setEndVelocity], [endVelocity], self, [addConstraint_MinMaxAcceleration])
+        trajectoryConfig = trajectory.TrajectoryConfig(maxVelocity, maxAcceleration)
+        MinMaxAcceleration = constraint.TrajectoryConstraint.minMaxAcceleration(Pose2d, radianValueFor10dgrs, 2)
         (self.SwerveDrive4Kinematics.kinematics)
         trajectoryConfig.setKinematics(self, [SwerveDrive4Kinematics])
+        trajectoryConfig.setStartVelocity(2)
+        trajectoryConfig.setEndVelocity(0)
+        trajectoryConfig.setReversed(False)
+        trajectoryConfig.startVelocity = 2
+        trajectoryConfig.endVelocity = 0
+        trajectoryConfig.isReversed = False
         
         self.trajectory = wpimath.trajectory.TrajectoryGenerator.generateTrajectory(
 			wpimath.geometry.Pose2d(0, 0, wpimath.geometry.Rotation2d.fromDegrees(0)), # Starting position
 			[wpimath.geometry.Translation2d(2,1), wpimath.geometry.Translation2d(3,2), wpimath.geometry.Translation2d(2,3), wpimath.geometry.Translation2d(1,2)], # Pass through these points
 			wpimath.geometry.Pose2d(0, 0, wpimath.geometry.Rotation2d.fromDegrees(0)), # Ending position
 			trajectoryConfig)
-        
-        
 
         
-
+        
+        
+ 
+      
+        
+        
+        
 
         """Called on each iteration of the control loop"""
 
