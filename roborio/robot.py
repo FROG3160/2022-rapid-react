@@ -5,18 +5,19 @@ from ctre import WPI_CANCoder, WPI_TalonFX, CANifier
 import magicbot
 from pyparsing import trace_parse_action
 import wpilib
+from components import drivetrain
 from wpilib import PneumaticsControlModule, Solenoid, PneumaticsModuleType
 from components.drivetrain import SwerveModule, SwerveChassis
 import wpimath
 from wpimath.geometry import Translation2d, Rotation2d, Pose2d
 from wpimath.kinematics import SwerveDrive4Kinematics,SwerveDrive4Odometry
-from components.driverstation import FROGStick, FROGBoxGunner
+from components.driverstation import FROGStick, FROGBoxGunner, 
 from components.sensors import FROGGyro, FROGdar
 from components.shooter import FROGShooter, Flywheel, Intake
 from components import drivetrain
 from wpimath import trajectory
 from wpimath.trajectory import constraint
-
+import math
 # robot characteristics
 # we are specifying inches and dividing by 12 to get feet,
 # giving us values that can be used with the fromFeet method
@@ -131,8 +132,7 @@ class FROGbot(magicbot.MagicRobot):
         radianValueFor10dgrs = 0.17453293
         trajectoryConfig = trajectory.TrajectoryConfig(maxVelocity, maxAcceleration)
         MinMaxAcceleration = constraint.TrajectoryConstraint.minMaxAcceleration(Pose2d, radianValueFor10dgrs, 2)
-        (self.SwerveDrive4Kinematics.kinematics)
-        trajectoryConfig.setKinematics(self, [SwerveDrive4Kinematics])
+        trajectoryConfig.setKinematics(SwerveDrive4Kinematics)
         trajectoryConfig.setStartVelocity(2)
         trajectoryConfig.setEndVelocity(0)
         trajectoryConfig.setReversed(False)
@@ -146,6 +146,13 @@ class FROGbot(magicbot.MagicRobot):
 			wpimath.geometry.Pose2d(0, 0, wpimath.geometry.Rotation2d.fromDegrees(0)), # Ending position
 			trajectoryConfig)
 
+        xController = wpilib.controller.PIDController(1, 0, 0)
+		yController = wpilib.controller.PIDController(1, 0, 0)
+		angleController = wpilib.controller.ProfiledPIDControllerRadians(1, 0, 0, wpimath.trajectory.TrapezoidProfileRadians.Constraints(math.pi, math.pi))
+		angleController.enableContinuousInput(-1*math.pi, math.pi)
+		self.swerveController = wpilib.controller.HolonomicDriveController(xController, yController, angleController)
+	
+ 
         
         
         
