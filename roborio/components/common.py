@@ -124,7 +124,7 @@ class PowerCurve:
         self.power = power
 
     def __call__(self, value):
-        return math.pow(value.self.power)
+        return math.pow(value, self.power)
 
 
 class DriveUnit:
