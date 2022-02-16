@@ -140,7 +140,6 @@ class SwerveModule:
     def __init__(self):
         # set initial states for the component
         self.velocity = 0
-        # TODO: set angle to sensed angle from CANCoder?
         self.angle = 0
         self.enabled = False
         self.state = SwerveModuleState(0, Rotation2d.fromDegrees(0))
@@ -225,9 +224,6 @@ class SwerveModule:
             self.encoder.getDeviceNumber(), RemoteSensorSource.CANCoder, 0
         )
         self.steer.setInverted(TalonFXInvertType.Clockwise)
-        # TODO: the following is now handled in the base config
-        #   with the ..primaryPID property.
-        #   - confirm this is the proper method
         # configure Falcon to use Remote Feedback 0
         # self.steer.configSelectedFeedbackSensor(FeedbackDevice.RemoteSensor0)
         self.steer.configIntegratedSensorInitializationStrategy(
@@ -236,7 +232,6 @@ class SwerveModule:
         self.steer.configIntegratedSensorAbsoluteRange(
             AbsoluteSensorRange.Signed_PlusMinus180
         )
-        # self.steer.setSelectedSensorPosition(0)  TODO: Not needed?
         self.steer.configSelectedFeedbackSensor(FeedbackDevice.RemoteSensor0)
         self.steer.setSensorPhase(True)
         # configure drive motor
@@ -264,10 +259,6 @@ class SwerveModule:
         # define what needs to happen if the
         # component is enabled/disabled
         if self.enabled:
-            # TODO: confirm correct units for position mode,
-            # and determine if the value needs to be inverted or not
-            # since the angle coming from the SwerveModuleState is
-            # positive to the left (counter-clockwise)
             steer_adjust, speed_multiplier = optimize_steer_angle(
                 self.state, self.cancoderTicksToRadians(self.getSteerPosition())
             )
@@ -286,14 +277,10 @@ class SwerveModule:
                 ),
             )
         else:
-            # TODO: decide whether we should
-            # zero velocity on disable.
-            self.steer.set(0)
             self.drive.set(0)
 
 
 class SwerveChassis:
-    # TODO: Add gyro to chassis, needed for field-oriented movement
     swerveFrontLeft: SwerveModule
     swerveFrontRight: SwerveModule
     swerveBackLeft: SwerveModule
@@ -386,7 +373,7 @@ class SwerveChassis:
         if self.enabled:
             # pass in the commanded speeds and center of rotation
             # and get back the speed and angle values for each module
-            # TODO: Change to field oriented
+
             states = self.kinematics.toSwerveModuleStates(
                 self.speeds, self.center
             )
