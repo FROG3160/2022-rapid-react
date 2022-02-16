@@ -1,7 +1,9 @@
+import wpilib
 from navx import AHRS
 from magicbot import feedback
 from ctre import CANifier
 from .common import Buffer
+from rev import ColorSensorV3
 
 BUFFERLEN = 50
 
@@ -82,3 +84,17 @@ class FROGdar:
         else:
             self.rangeBuffer.clear()
             self.targetRange = None
+
+
+class FROGColor:
+
+    def __init__(self):
+        self.color = ColorSensorV3(wpilib.I2C.Port.kOnboard)
+
+    def enable(self):
+        self.enable = True
+
+    def disable(self):
+        self.disable = False
+
+    
