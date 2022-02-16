@@ -3,6 +3,7 @@ from magicbot import feedback
 from ctre import CANifier
 from .common import Buffer
 import math 
+import wpilib
 
 BUFFERLEN = 50
 
@@ -114,3 +115,28 @@ class FROGdar:
         else:
             self.rangeBuffer.clear()
             self.targetRange = None
+
+
+class UltraSonic:
+
+    def __init__(self):
+        self.CargoUltraSonic = wpilib.AnalogInput(0)
+        
+
+    @feedback(key="Ultrasonic_inches")
+    def getUSRange(self):
+        return self.USInchRange()
+
+
+
+    def execute(self):
+       """
+       A 5V power supply yields~4.88mV per 5 mm. Output voltage range
+       when powered with 5V is 293mV for 300-mm, and 4.885V for 5000-mm. 
+       """
+       self.USVolt = self.CargoUltraSonic.getVoltage()
+
+       # Converts voltage to range inches. 5mm = 0.1968504
+       self.USInchRange = (self.USVolt / 0.00488) * 0.1968504
+
+       
