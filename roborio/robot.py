@@ -143,6 +143,9 @@ class FROGbot(magicbot.MagicRobot):
         trajectoryConfig.setStartVelocity(2)
         trajectoryConfig.setEndVelocity(0)
         trajectoryConfig.setReversed(False)
+        trajectoryConfig.startVelocity()
+        trajectoryConfig.endVelocity()
+        trajectoryConfig.isReversed()
         
         #TrajectoryGenerate
         trajectoryGenerator =  trajectory.TrajectoryGenerator.generateTrajectory(
