@@ -149,15 +149,15 @@ class FROGbot(magicbot.MagicRobot):
         
         #TrajectoryGenerate
         trajectoryGenerator =  trajectory.TrajectoryGenerator.generateTrajectory(
-			geometry.Pose2d(0, 0, wpimath.geometry.Rotation2d.fromDegrees(0)), # Starting position
+			geometry.Pose2d(0, 0, geometry.Rotation2d.fromDegrees(0)), # Starting position
 			[geometry.Translation2d(2,1), geometry.Translation2d(3,2), geometry.Translation2d(2,3), geometry.Translation2d(1,2)], # Waypoints
 			geometry.Pose2d(0, 0, geometry.Rotation2d.fromDegrees(0)), # Ending position
             trajectoryConfig)
 
      
         #HolonomicDriveController
-        holonomicDC = controller.HolonomicDriveController(wpimath.controller.PIDController(1, 0, 0),
-        wpimath.controller.PIDController(1, 0, 0), wpimath.controller.ProfiledPIDController(1, 0, 0))
+        holonomicDC = controller.HolonomicDriveController(controller.PIDController(1, 0, 0),
+        controller.PIDController(1, 0, 0), controller.ProfiledPIDController(1, 0, 0))
         holonomicDC.atReference()
         holonomicDC.calculate(Pose2d, maxAcceleration, Rotation2d)
         holonomicDC.setEnabled(True)
