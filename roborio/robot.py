@@ -6,18 +6,20 @@ import magicbot
 from pyparsing import trace_parse_action
 import wpilib
 from components import drivetrain
-from wpilib import PneumaticsControlModule, Solenoid, PneumaticsModuleType
+from wpilib import PneumaticsControlModule, Solenoid, PneumaticsModuleType 
 from components.drivetrain import SwerveModule, SwerveChassis
 import wpimath
 from wpimath.geometry import Translation2d, Rotation2d, Pose2d
 from wpimath.kinematics import SwerveDrive4Kinematics,SwerveDrive4Odometry
-from components.driverstation import FROGStick, FROGBoxGunner, 
+from components.driverstation import FROGStick, FROGBoxGunner
 from components.sensors import FROGGyro, FROGdar
 from components.shooter import FROGShooter, Flywheel, Intake
 from components import drivetrain
-from wpimath import trajectory
-from wpimath.trajectory import constraint
+from wpimath import trajectory, controller, geometry
+from wpimath.trajectory import constraint, TrapezoidProfileRadians, TrapezoidProfile
 import math
+from wpimath.controller import PIDController, ProfiledPIDController, HolonomicDriveController
+
 # robot characteristics
 # we are specifying inches and dividing by 12 to get feet,
 # giving us values that can be used with the fromFeet method
@@ -125,44 +127,43 @@ class FROGbot(magicbot.MagicRobot):
         pass
 
     def autonomousInit(self):
+        self.vision.setAllianceColor(self,drivetrain.getAlliance)
         self.automodes.start()
+        
+        # Defining some variables
         self.pose = Pose2d(Translation2d(2,2), Rotation2d(0))
         maxVelocity = 4.96824
         maxAcceleration = 2.48412
         radianValueFor10dgrs = 0.17453293
+        
+        # TrajectoryConfig
         trajectoryConfig = trajectory.TrajectoryConfig(maxVelocity, maxAcceleration)
         MinMaxAcceleration = constraint.TrajectoryConstraint.minMaxAcceleration(Pose2d, radianValueFor10dgrs, 2)
         trajectoryConfig.setKinematics(SwerveDrive4Kinematics)
         trajectoryConfig.setStartVelocity(2)
         trajectoryConfig.setEndVelocity(0)
         trajectoryConfig.setReversed(False)
-        trajectoryConfig.startVelocity = 2
-        trajectoryConfig.endVelocity = 0
-        trajectoryConfig.isReversed = False
         
-        self.trajectory = wpimath.trajectory.TrajectoryGenerator.generateTrajectory(
-			wpimath.geometry.Pose2d(0, 0, wpimath.geometry.Rotation2d.fromDegrees(0)), # Starting position
-			[wpimath.geometry.Translation2d(2,1), wpimath.geometry.Translation2d(3,2), wpimath.geometry.Translation2d(2,3), wpimath.geometry.Translation2d(1,2)], # Pass through these points
-			wpimath.geometry.Pose2d(0, 0, wpimath.geometry.Rotation2d.fromDegrees(0)), # Ending position
-			trajectoryConfig)
+        #TrajectoryGenerate
+        trajectoryGenerator =  trajectory.TrajectoryGenerator.generateTrajectory(
+			geometry.Pose2d(0, 0, wpimath.geometry.Rotation2d.fromDegrees(0)), # Starting position
+			[geometry.Translation2d(2,1), geometry.Translation2d(3,2), geometry.Translation2d(2,3), geometry.Translation2d(1,2)], # Waypoints
+			geometry.Pose2d(0, 0, geometry.Rotation2d.fromDegrees(0)), # Ending position
+            trajectoryConfig)
 
-        xController = wpilib.controller.PIDController(1, 0, 0)
-		yController = wpilib.controller.PIDController(1, 0, 0)
-		angleController = wpilib.controller.ProfiledPIDControllerRadians(1, 0, 0, wpimath.trajectory.TrapezoidProfileRadians.Constraints(math.pi, math.pi))
-		angleController.enableContinuousInput(-1*math.pi, math.pi)
-		self.swerveController = wpilib.controller.HolonomicDriveController(xController, yController, angleController)
-	
- 
-        
-        
-        
- 
-      
-        
-        
-        
+     
+        #HolonomicDriveController
+        holonomicDC = controller.HolonomicDriveController(wpimath.controller.PIDController(1, 0, 0),
+        wpimath.controller.PIDController(1, 0, 0), wpimath.controller.ProfiledPIDController(1, 0, 0))
+        holonomicDC.atReference()
+        holonomicDC.calculate(Pose2d, maxAcceleration, Rotation2d)
+        holonomicDC.setEnabled(True)
+        holonomicDC.setTolerance(Pose2d)
 
-        """Called on each iteration of the control loop"""
+
+
+
+             #Called on each iteration of the control loop
 
         # Get gunner controlsotDimensions])
 
