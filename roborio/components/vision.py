@@ -48,6 +48,7 @@ class FROGVision:
         if target := self.CargoTarget.getYaw():
             return target / LC_X_div
 
+    @feedback(key="Cargo X")
     def getCargoXAverage(self):
         if target := self.CargoYawBuff.average():
             return target / LC_X_div
@@ -56,6 +57,7 @@ class FROGVision:
         if target := self.GoalTarget.getYaw():
             return target / PI_X_div
 
+    @feedback(key="Goal X")
     def getGoalXAverage(self):
         if target := self.GoalYawBuff.average():
             return target / PI_X_div
@@ -78,8 +80,9 @@ class FROGVision:
     def setCargoRed(self):
         self.CARGOcam.setPipelineIndex(1)
 
+    @feedback(key="Alliance Cargo")
     def targetingAllianceCargo(self):
-        return self.getCurrentCargoPipeline() == self.allianceColor + 1
+        return self.getCurrentCargoPipeline() == self.allianceColor.value + 1
 
     def execute(self):
         # Grabs the latest results from the Cameras and then get the

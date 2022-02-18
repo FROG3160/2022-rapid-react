@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from ctre import WPI_CANCoder, WPI_TalonFX, CANifier
 import magicbot
+from magicbot import feedback
 import wpilib
 import math
 from wpilib import (
@@ -27,6 +28,7 @@ wheelbase = 21.75 / 12  # feet between wheels front to back
 kDeadzone = 0.2
 joystickAxisDeadband = Rescale((-1, 1), (-1, 1), 0.15)
 joystickTwistDeadband = Rescale((-1, 1), (-1, 1), 0.2)
+visionDeadband = Rescale((-1,1), (.7, .7))
 CTRE_PCM = PneumaticsModuleType.CTREPCM
 TARGET_CARGO = 0
 TARGET_GOAL = 1
@@ -131,6 +133,21 @@ class FROGbot(magicbot.MagicRobot):
         self.autoTargeting = True
         self.objectTargeted = TARGET_GOAL
 
+    @feedback(key="Auto Targeting")
+    def getAutoTargeting(self):
+        return self.autoTargeting
+
+    @feedback(key="Object Targeted")
+    def getObjectTargeted(self):
+        return ['Cargo', 'Goal'][self.objectTargeted]
+
+    @feedback(key='TargetX')
+    def getTarget(self):
+        return [
+            self.vision.getCargoXAverage(),
+            self.vision.getGoalXAverage(),
+        ][self.objectTargeted]
+
     def autonomousInit(self):
         pass
 
@@ -172,7 +189,7 @@ class FROGbot(magicbot.MagicRobot):
             self.autoTargeting = [True, False][self.autoTargeting]
 
         # allows driver to override targeting control of rotation
-        if self.driveStick.getRawButton(5):
+        if self.driveStick.getRawButton(2):
             self.overrideTargeting = True
         else:
             self.overrideTargeting = False
@@ -180,10 +197,7 @@ class FROGbot(magicbot.MagicRobot):
         xOrig = joystickAxisDeadband(self.driveStick.getFieldForward())
         yOrig = joystickAxisDeadband(self.driveStick.getFieldLeft())
 
-        target = [
-            self.vision.getCargoXAverage(),
-            self.vision.getGoalXAverage(),
-        ][self.objectTargeted]
+        target = self.getTarget()
 
         if self.autoTargeting and target and not self.overrideTargeting:
             tOrig = -1 * target
