@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-
 from ctre import WPI_CANCoder, WPI_TalonFX, CANifier
 import magicbot
 import wpilib
-
+import math
 from wpilib import (
     PneumaticsControlModule,
     Solenoid,
@@ -27,7 +26,10 @@ trackwidth = 27.75 / 12  # feet between wheels side to side
 wheelbase = 21.75 / 12  # feet between wheels front to back
 kDeadzone = 0.2
 joystickAxisDeadband = Rescale((-1, 1), (-1, 1), 0.15)
+joystickTwistDeadband = Rescale((-1,1), (-1, 1), 0.2)
 CTRE_PCM = PneumaticsModuleType.CTREPCM
+TARGET_CARGO = 0
+TARGET_GOAL = 1
 
 
 class FROGbot(magicbot.MagicRobot):
@@ -91,7 +93,7 @@ class FROGbot(magicbot.MagicRobot):
         )
 
         self.swerveFrontLeft_steerOffset = 13.008
-        self.swerveFrontRight_steerOffset = -175.166
+        self.swerveFrontRight_steerOffset = 171.914
         self.swerveBackLeft_steerOffset = 22.764
         self.swerveBackRight_steerOffset = -43.242
 
@@ -126,6 +128,9 @@ class FROGbot(magicbot.MagicRobot):
 
         self.driverstation = DriverStation
 
+        self.autoTargeting = True
+        self.objectTargeted = TARGET_GOAL
+
     def autonomousInit(self):
         self.vision.setAllianceColor(self.driverstation.getAlliance())
 
@@ -157,17 +162,46 @@ class FROGbot(magicbot.MagicRobot):
         else:
             self.intake.deactivateLaunch()
 
+        if self.gunnerControl.getBButtonReleased():
+            self.objectTargeted = [TARGET_GOAL, TARGET_CARGO][
+                self.objectTargeted
+            ]
+
+        if self.gunnerControl.getXButtonReleased():
+            self.autoTargeting = [True, False][self.autoTargeting]
+
+        if self.driveStick.getRawButton(5):
+            self.overrideTargeting = True
+        else:
+            self.overrideTargeting = False
+
+
+        xOrig = joystickAxisDeadband(self.driveStick.getFieldForward())
+        yOrig = joystickAxisDeadband(self.driveStick.getFieldLeft())
+
+        # if self.autoTargeting and not self.overrideTargeting:
+        #     tOrig = (
+        #         -1
+        #         * [
+        #             self.vision.getCargoXAverage(),
+        #             self.vision.getGoalXAverage(),
+        #         ][self.objectTargeted]
+        #     )
+        # else:
+        tOrig = joystickTwistDeadband(self.driveStick.getFieldRotation())
+
         # Get driver controls
         vX, vY, vT = (
-            joystickAxisDeadband(self.driveStick.getFieldForward()),
-            joystickAxisDeadband(self.driveStick.getFieldLeft()),
-            joystickAxisDeadband(self.driveStick.getFieldRotation()) ** 3
+            math.copysign(xOrig**2, xOrig),
+            math.copysign(yOrig**2, yOrig),
+            math.copysign(tOrig**2, tOrig),
         )
         if vX or vY or vT:
             self.swerveChassis.field_oriented_drive(vX, vY, vT)
 
         if self.driveStick.getTrigger():
             self.gyro.resetGyro()
+            self.swerveChassis.field_oriented_drive(0,0,0)
 
     def testInit(self):
         """Called when test mode starts; optional"""

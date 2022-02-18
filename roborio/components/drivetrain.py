@@ -1,5 +1,6 @@
 from ctre import (
     FeedbackDevice,
+    NeutralMode,
     RemoteSensorSource,
     WPI_TalonFX,
     WPI_CANCoder,
@@ -212,11 +213,13 @@ class SwerveModule:
             AbsoluteSensorRange.Signed_PlusMinus180
         )
         self.encoder.configSensorDirection(False)
+        # adjust 0 degree point with offset
+        self.encoder.configMagnetOffset(self.steerOffset)
         self.encoder.configSensorInitializationStrategy(
             SensorInitializationStrategy.BootToAbsolutePosition
         )
-        # adjust 0 degree point with offset
-        self.encoder.configMagnetOffset(self.steerOffset)
+        # set position to Absolute
+        self.encoder.setPositionToAbsolute()
 
         self.steer.configAllSettings(cfgSteerMotor)
         # define the remote CANCoder as Remote Feedback 0
@@ -234,9 +237,11 @@ class SwerveModule:
         )
         self.steer.configSelectedFeedbackSensor(FeedbackDevice.RemoteSensor0)
         self.steer.setSensorPhase(True)
+        self.steer.setNeutralMode(NeutralMode.Brake)
         # configure drive motor
         self.drive.configAllSettings(cfgDriveMotor)
         self.drive.setInverted(TalonFXInvertType.Clockwise)
+        self.drive.configClosedloopRamp(.25)
 
     def setState(self, state):
         # adjusts the speed and angle for minimal change
