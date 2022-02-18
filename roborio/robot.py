@@ -1,16 +1,19 @@
 #!/usr/bin/env python3
 
 from asyncio.tasks import _T1
+from inspect import ArgSpec
+from sre_parse import State
+import statistics
 from ctre import WPI_CANCoder, WPI_TalonFX, CANifier
 import magicbot
 from pyparsing import trace_parse_action
 import wpilib
 from components import drivetrain
 from wpilib import PneumaticsControlModule, Solenoid, PneumaticsModuleType 
-from components.drivetrain import SwerveModule, SwerveChassis
+from components.drivetrain import SwerveModule, SwerveChassis, ChassisSpeeds
 import wpimath
 from wpimath.geometry import Translation2d, Rotation2d, Pose2d
-from wpimath.kinematics import SwerveDrive4Kinematics,SwerveDrive4Odometry
+from wpimath.kinematics import SwerveDrive4Kinematics, SwerveDrive4Odometry 
 from components.driverstation import FROGStick, FROGBoxGunner
 from components.sensors import FROGGyro, FROGdar
 from components.shooter import FROGShooter, Flywheel, Intake
@@ -147,21 +150,40 @@ class FROGbot(magicbot.MagicRobot):
         trajectoryConfig.endVelocity()
         trajectoryConfig.isReversed()
         
+
         #TrajectoryGenerate
         trajectoryGenerator =  trajectory.TrajectoryGenerator.generateTrajectory(
-			geometry.Pose2d(0, 0, geometry.Rotation2d.fromDegrees(0)), # Starting position
+			geometry.Pose2d(Translation2d(0, 0), geometry.Rotation2d.fromDegrees(0)), # Starting position
 			[geometry.Translation2d(2,1), geometry.Translation2d(3,2), geometry.Translation2d(2,3), geometry.Translation2d(1,2)], # Waypoints
 			geometry.Pose2d(0, 0, geometry.Rotation2d.fromDegrees(0)), # Ending position
             trajectoryConfig)
 
      
-        #HolonomicDriveController
-        holonomicDC = controller.HolonomicDriveController(controller.PIDController(1, 0, 0),
+        #HolonomicDriveController(Swerve Controller)
+        swerveController = controller.HolonomicDriveController(controller.PIDController(1, 0, 0),
         controller.PIDController(1, 0, 0), controller.ProfiledPIDController(1, 0, 0))
-        holonomicDC.atReference()
-        holonomicDC.calculate(Pose2d, maxAcceleration, Rotation2d)
-        holonomicDC.setEnabled(True)
-        holonomicDC.setTolerance(Pose2d)
+        swerveController.atReference()
+        swerveController.calculate(Pose2d, maxAcceleration, Rotation2d)
+        swerveController.setEnabled(True)
+        swerveController.setTolerance(Pose2d)
+
+
+        # Trajectory sample method
+        # Not sure if we need the rest of those methods
+        trajectorystate = trajectory.Trajectory()
+        trajectorystate.State(1, 2, maxAcceleration, Pose2d, radianValueFor10dgrs)
+        trajectorystate.initialPose()
+        trajectorystate.relativeTo(Pose2d)
+        sample = trajectorystate.sample(1)
+        trajectorystate.states()
+        
+        # Passing sample into calculate() method 
+        adjustedSpeeds = swerveController.calculate(drivetrain.SwerveDrive4Odometry.getPose(), sample, geometry.Rotation2d.fromDegrees(90))
+        drivetrain.ChassisSpeeds(adjustedSpeeds)
+
+
+
+
 
 
 
