@@ -89,12 +89,24 @@ class FROGdar:
 class FROGColor:
 
     def __init__(self):
-        self.color = ColorSensorV3(wpilib.I2C.Port.kOnboard)
+        self.enabled = False
+        self.colorSensor = ColorSensorV3(wpilib.I2C.Port.kOnboard)
+        self.detectedColor = self.colorSensor.getColor()
 
     def enable(self):
-        self.enable = True
+        self.enabled = True
 
     def disable(self):
-        self.disable = False
+        self.enabled = False
 
+    @feedback(key='Red')
+    def getRed(self):
+        return self.detectedColor.red
+
+    @feedback(key='Blue')
+    def getBlue(self):
+        return self.detectedColor.blue
+
+    def execute(self):
+        pass
     
