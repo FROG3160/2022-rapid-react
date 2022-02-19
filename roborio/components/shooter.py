@@ -1,4 +1,4 @@
-from re import T
+from wpilib import DriverStation, Solenoid
 from ctre import (
     WPI_TalonFX,
     FeedbackDevice,
@@ -12,14 +12,14 @@ from components.sensors import FROGdar
 
 
 # TODO Find out the Min/Max of the velocity and the tolerence for the Flywheel
-FLYWHEEL_MODE = ControlMode.PercentOutput
-FLYWHEEL_PID = TalonPID(0, p=0.4, f=0.0515)
+FLYWHEEL_MODE = ControlMode.Velocity
+FLYWHEEL_PID = TalonPID(0, p=0, f=0.042)
 FLYWHEEL_VELOCITY = 0
-FLYWHEEL_MAX_VEL = 1 # Falcon ()
+FLYWHEEL_MAX_VEL = 22000  # Falcon ()
 FLYWHEEL_MAX_ACCEL = FLYWHEEL_MAX_VEL / 50
 FLYWHEEL_MAX_DECEL = -FLYWHEEL_MAX_ACCEL
-FLYWHEEL_INCREMENT = 0.1
-FLYWHEEL_VEL_TOLERANCE = 300
+FLYWHEEL_INCREMENT = 100
+FLYWHEEL_VEL_TOLERANCE = 100
 FLYWHEEL_LOOP_RAMP = 0.25
 
 
@@ -71,19 +71,19 @@ class Flywheel:
         self.motor.configClosedloopRamp(FLYWHEEL_LOOP_RAMP)
 
     def setVelocity(self, velocity):
-        #self._controlMode = ControlMode.Velocity
+        # self._controlMode = ControlMode.Velocity
+        if velocity > FLYWHEEL_MAX_VEL:
+            velocity = FLYWHEEL_MAX_VEL
+        elif velocity < 0:
+            velocity = 0
         self._velocity = velocity
 
     def incrementSpeed(self):
         velocity = self._velocity + FLYWHEEL_INCREMENT
-        if velocity > FLYWHEEL_MAX_VEL:
-            velocity = FLYWHEEL_MAX_VEL
         self.setVelocity(velocity)
 
     def decrementSpeed(self):
         velocity = self._velocity - FLYWHEEL_INCREMENT
-        if velocity < 0:
-            velocity = 0
         self.setVelocity(velocity)
 
     def execute(self):
@@ -93,14 +93,40 @@ class Flywheel:
             self.motor.set(0)
 
 
+class Intake:
+    retrieve: Solenoid
+    hold: Solenoid
+
+    def __init__(self):
+        pass
+
+    def activateRetrieve(self):
+        self.retrieve.set(True)
+
+    def deactivateRetrieve(self):
+        self.retrieve.set(False)
+
+    def activateHold(self):
+        self.hold.set(True)
+
+    def deactivateHold(self):
+        self.hold.set(False)
+
+    def execute(self):
+        pass
+
+
 class FROGShooter:
-    lidar: FROGdar
     lowerFlywheel: Flywheel
     upperFlywheel: Flywheel
+    launch: Solenoid
 
     def __init__(self):
         self._enable = False
         self._automatic = False
+        self.ratio_lower = 5
+        self.ratio_upper = 5
+        self._flywheel_speeds = 0
 
     def enable(self):
         self._enabled = True
@@ -118,10 +144,12 @@ class FROGShooter:
         self.upperFlywheel.setVelocity(0)
 
     def setup(self):
+        # these settings are different for each motor, so we
+        # set them here
         self.lowerFlywheel.motor.setInverted(TalonFXInvertType.Clockwise)
         self.upperFlywheel.motor.setInverted(TalonFXInvertType.CounterClockwise)
-        self.lowerFlywheel.motor.setSensorPhase(False)
-        self.upperFlywheel.motor.setSensorPhase(False)
+        self.lowerFlywheel.motor.setSensorPhase(True)
+        self.upperFlywheel.motor.setSensorPhase(True)
         self.set_manual()
         self.enable()
 
@@ -130,9 +158,38 @@ class FROGShooter:
         self.lowerFlywheel.disable()
         self.upperFlywheel.disable()
 
-    def getdistance(self):
-        # get the value/distance from the lidar in inches
-        return self.lidar.getDistance()
+    def setFlywheelSpeeds(self, speed: int):
+        if speed > FLYWHEEL_MAX_VEL:
+            speed = FLYWHEEL_MAX_VEL
+        elif speed < 0:
+            speed = 0
+        self._flywheel_speeds = speed
+
+    def incrementFlywheelSpeeds(self):
+        self.setFlywheelSpeeds(self._flywheel_speeds + FLYWHEEL_INCREMENT)
+
+    def decrementFlywheelSpeeds(self):
+        self.setFlywheelSpeeds(self._flywheel_speeds - FLYWHEEL_INCREMENT)
+
+    def setLowerRatio(self, val: int):
+        self.ratio_lower = val
+
+    def setUpperRatio(self, val: int):
+        self.ratio_upper = val
+
+    def activateLaunch(self):
+        self.launch.set(True)
+
+    def deactivateLaunch(self):
+        self.launch.set(False)
+
+    @feedback()
+    def getLowerRatio(self):
+        return self.ratio_lower
+
+    @feedback()
+    def getUpperRatio(self):
+        return self.ratio_upper
 
     def execute(self):
         if self._enabled:
@@ -141,5 +198,8 @@ class FROGShooter:
                 # the speeds of the motors
                 pass
             else:
+                self.lowerFlywheel.setVelocity(self._flywheel_speeds)
+                self.upperFlywheel.setVelocity(self._flywheel_speeds*(1/(self.ratio_lower/self.ratio_upper)))
+
                 # run the motors at the speeds they already have
                 pass

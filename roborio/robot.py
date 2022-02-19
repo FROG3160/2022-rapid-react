@@ -1,13 +1,23 @@
 #!/usr/bin/env python3
-
 from ctre import WPI_CANCoder, WPI_TalonFX, CANifier
 import magicbot
+from magicbot import feedback
 import wpilib
+import math
+from wpilib import (
+    PneumaticsControlModule,
+    Solenoid,
+    PneumaticsModuleType,
+    DriverStation,
+)
 from components.drivetrain import SwerveModule, SwerveChassis
 from wpimath.geometry import Translation2d
 from components.driverstation import FROGStick, FROGBoxGunner
 from components.sensors import FROGGyro, FROGdar
-from components.shooter import FROGShooter, Flywheel
+from components.shooter import FROGShooter, Flywheel, Intake
+from components.vision import FROGVision
+from components.common import Rescale
+
 
 # robot characteristics
 # we are specifying inches and dividing by 12 to get feet,
@@ -15,8 +25,13 @@ from components.shooter import FROGShooter, Flywheel
 # to get a correct Translation2d object
 trackwidth = 27.75 / 12  # feet between wheels side to side
 wheelbase = 21.75 / 12  # feet between wheels front to back
-
-kDeadzone = 0.05
+kDeadzone = 0.2
+joystickAxisDeadband = Rescale((-1, 1), (-1, 1), 0.15)
+joystickTwistDeadband = Rescale((-1, 1), (-1, 1), 0.2)
+visionDeadband = Rescale((-1,1), (.7, .7))
+CTRE_PCM = PneumaticsModuleType.CTREPCM
+TARGET_CARGO = 0
+TARGET_GOAL = 1
 
 
 class FROGbot(magicbot.MagicRobot):
@@ -26,8 +41,10 @@ class FROGbot(magicbot.MagicRobot):
 
     gyro: FROGGyro
     lidar: FROGdar
+    vision: FROGVision
     swerveChassis: SwerveChassis
     shooter: FROGShooter
+    intake: Intake
 
     swerveFrontLeft: SwerveModule
     swerveFrontRight: SwerveModule
@@ -36,6 +53,10 @@ class FROGbot(magicbot.MagicRobot):
 
     lowerFlywheel: Flywheel
     upperFlywheel: Flywheel
+
+    def allianceColor(self):
+
+        self.driverstation.getAlliance()
 
     def createObjects(self):
         """Create motors and inputs"""
@@ -73,10 +94,10 @@ class FROGbot(magicbot.MagicRobot):
             -trackwidth / 2,
         )
 
-        self.swerveFrontLeft_steerOffset = 0.0
-        self.swerveFrontRight_steerOffset = 0.0
-        self.swerveBackLeft_steerOffset = 0.0
-        self.swerveBackRight_steerOffset = 0.0
+        self.swerveFrontLeft_steerOffset = 13.008
+        self.swerveFrontRight_steerOffset = 171.914
+        self.swerveBackLeft_steerOffset = 22.764
+        self.swerveBackRight_steerOffset = -43.242
 
         # flywheel motors
         self.lowerFlywheel_motor = WPI_TalonFX(41)
@@ -87,8 +108,17 @@ class FROGbot(magicbot.MagicRobot):
         # CANifier for LIDAR
         self.lidar_canifier = CANifier(36)
 
+        # PCM
+        self.pcm = PneumaticsControlModule(1)
+        # Solenoids for shooter
+        self.intake_retrieve = Solenoid(CTRE_PCM, 0)
+        self.intake_hold = Solenoid(CTRE_PCM, 1)
+        self.intake_launch = Solenoid(CTRE_PCM, 2)
+
         # config for saitek joystick
-        self.driveStick = FROGStick(0, 0, 1, 3, 2)
+        # self.driveStick = FROGStick(0, 0, 1, 3, 2)
+        # config for Logitech Extreme 3D
+        self.driveStick = FROGStick(0, 0, 1, 2, 3)
         self.gunnerControl = FROGBoxGunner(1)
 
         self.field = wpilib.Field2d()
@@ -98,38 +128,94 @@ class FROGbot(magicbot.MagicRobot):
         if not self.isSimulation():
             wpilib.SmartDashboard.putData(self.field)
 
+        self.driverstation = DriverStation
+
+        self.autoTargeting = True
+        self.objectTargeted = TARGET_GOAL
+
+    @feedback(key="Auto Targeting")
+    def getAutoTargeting(self):
+        return self.autoTargeting
+
+    @feedback(key="Object Targeted")
+    def getObjectTargeted(self):
+        return ['Cargo', 'Goal'][self.objectTargeted]
+
+    @feedback(key='TargetX')
+    def getTarget(self):
+        return [
+            self.vision.getCargoXAverage(),
+            self.vision.getGoalXAverage(),
+        ][self.objectTargeted]
+
+    def autonomousInit(self):
+        pass
+
     def teleopInit(self):
         """Called when teleop starts; optional"""
         self.swerveChassis.enable()
-        pass
 
     def teleopPeriodic(self):
         """Called on each iteration of the control loop"""
 
         # Get gunner controls
         if self.gunnerControl.getYButtonReleased():
-            self.shooter.upperFlywheel.incrementSpeed()
+            self.shooter.incrementFlywheelSpeeds()
         if self.gunnerControl.getAButtonReleased():
-            self.shooter.upperFlywheel.decrementSpeed()
+            self.shooter.decrementFlywheelSpeeds()
+        # if self.gunnerControl.getBButtonReleased():
+        #     self.shooter.lowerFlywheel.incrementSpeed()
+        # if self.gunnerControl.getXButtonReleased():
+        #     self.shooter.lowerFlywheel.decrementSpeed()
+
+        if self.gunnerControl.getLeftBumper():
+            self.intake.activateHold()
+        else:
+            self.intake.deactivateHold()
+
+        if self.gunnerControl.getRightBumper():
+            self.intake.activateLaunch()
+        else:
+            self.intake.deactivateLaunch()
+
+        # toggles self.objectTargeted
         if self.gunnerControl.getBButtonReleased():
-            self.shooter.lowerFlywheel.incrementSpeed()
+            self.objectTargeted = [TARGET_GOAL, TARGET_CARGO][
+                self.objectTargeted
+            ]
+
+        # toggles targeting mode
         if self.gunnerControl.getXButtonReleased():
-            self.shooter.lowerFlywheel.decrementSpeed()
-        
+            self.autoTargeting = [True, False][self.autoTargeting]
+
+        # allows driver to override targeting control of rotation
+        if self.driveStick.getRawButton(2):
+            self.overrideTargeting = True
+        else:
+            self.overrideTargeting = False
+
+        xOrig = joystickAxisDeadband(self.driveStick.getFieldForward())
+        yOrig = joystickAxisDeadband(self.driveStick.getFieldLeft())
+
+        target = self.getTarget()
+
+        if self.autoTargeting and target and not self.overrideTargeting:
+            tOrig = -1 * target
+        else:
+            tOrig = joystickTwistDeadband(self.driveStick.getFieldRotation())
 
         # Get driver controls
         vX, vY, vT = (
-            (self.driveStick.getFieldForward(), 0)[
-                abs(self.driveStick.getFieldForward()) < kDeadzone
-            ],
-            (self.driveStick.getFieldLeft(), 0)[
-                abs(self.driveStick.getFieldLeft()) < kDeadzone
-            ],
-            (self.driveStick.getFieldRotation(), 0)[
-                abs(self.driveStick.getFieldRotation()) < kDeadzone
-            ],
+            math.copysign(xOrig**2, xOrig),
+            math.copysign(yOrig**2, yOrig),
+            math.copysign(tOrig**2, tOrig),
         )
-        self.swerveChassis.field_oriented_drive(vX, vY, vT)
+        if vX or vY or vT:
+            self.swerveChassis.field_oriented_drive(vX, vY, vT)
+
+        if self.driveStick.getTrigger():
+            self.gyro.resetGyro()
+            self.swerveChassis.field_oriented_drive(0, 0, 0)
 
     def testInit(self):
         """Called when test mode starts; optional"""
