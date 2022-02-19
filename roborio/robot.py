@@ -9,7 +9,7 @@ import magicbot
 from pyparsing import trace_parse_action
 import wpilib
 from components import drivetrain
-from wpilib import PneumaticsControlModule, Solenoid, PneumaticsModuleType 
+from wpilib import PneumaticsControlModule, SmartDashboard, Solenoid, PneumaticsModuleType 
 from components.drivetrain import SwerveModule, SwerveChassis, ChassisSpeeds
 import wpimath
 from wpimath.geometry import Translation2d, Rotation2d, Pose2d
@@ -17,6 +17,7 @@ from wpimath.kinematics import SwerveDrive4Kinematics, SwerveDrive4Odometry
 from components.driverstation import FROGStick, FROGBoxGunner
 from components.sensors import FROGGyro, FROGdar
 from components.shooter import FROGShooter, Flywheel, Intake
+from components.drivetrain import SwerveChassis
 from components import drivetrain
 from wpimath import trajectory, controller, geometry
 from wpimath.trajectory import constraint, TrapezoidProfileRadians, TrapezoidProfile
@@ -132,7 +133,7 @@ class FROGbot(magicbot.MagicRobot):
     def autonomousInit(self):
         self.vision.setAllianceColor(self,drivetrain.getAlliance)
         self.automodes.start()
-        
+       
         # Defining some variables
         self.pose = Pose2d(Translation2d(2,2), Rotation2d(0))
         maxVelocity = 4.96824
@@ -160,13 +161,20 @@ class FROGbot(magicbot.MagicRobot):
 
      
         #HolonomicDriveController(Swerve Controller)
+        radiansProfile = trajectory.TrapezoidProfileRadians()
+        radiansProfile.Constraints(maxVelocity, maxAcceleration)
+        radiansProfile.State(0, 0)
+        radiansProfile.calculate(1)
+        radiansProfile.isFinished(1)
+        radiansProfile.timeLeftUntil(0)
+        radiansProfile.totalTime()
         swerveController = controller.HolonomicDriveController(controller.PIDController(1, 0, 0),
-        controller.PIDController(1, 0, 0), controller.ProfiledPIDController(1, 0, 0))
+        controller.PIDController(1, 0, 0), controller.ProfiledPIDController(1, 0, 0, radiansProfile, 0.02))
         swerveController.atReference()
         swerveController.calculate(Pose2d, maxAcceleration, Rotation2d)
         swerveController.setEnabled(True)
         swerveController.setTolerance(Pose2d)
-
+        
 
         # Trajectory sample method
         # Not sure if we need the rest of those methods
@@ -178,17 +186,13 @@ class FROGbot(magicbot.MagicRobot):
         trajectorystate.states()
         
         # Passing sample into calculate() method 
-        adjustedSpeeds = swerveController.calculate(drivetrain.SwerveDrive4Odometry.getPose(), sample, geometry.Rotation2d.fromDegrees(90))
-        drivetrain.ChassisSpeeds(adjustedSpeeds)
+        adjustedSpeeds = swerveController.calculate(drivetrain.SwerveDrive4Odometry.getPose(), sample, geometry.Rotation2d.fromDegrees(0))
+        
+        # Adjusted ChassisSpeeds to the Swerve Chassis
+        
 
 
-
-
-
-
-
-
-             #Called on each iteration of the control loop
+        #Called on each iteration of the control loop
 
         # Get gunner controlsotDimensions])
 
