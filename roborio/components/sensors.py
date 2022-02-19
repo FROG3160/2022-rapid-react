@@ -1,6 +1,7 @@
 from navx import AHRS
 from magicbot import feedback
 from ctre import CANifier
+import wpilib
 from .common import Buffer
 import math 
 
@@ -114,3 +115,18 @@ class FROGdar:
         else:
             self.rangeBuffer.clear()
             self.targetRange = None
+
+class FROGsonic:
+
+    def __init__(self):
+        self.CargoUltrasonic = wpilib.AnalogInput(0)
+
+    def execute(self):
+        pass
+
+    def __call__(self):
+        self.getInches()
+
+    def getInches(self):
+        self.USVolt = self.CargoUltrasonic.getVoltage()
+        self.USInchRange = (self.USVolt * 5/ 0.00488) * 0.039
