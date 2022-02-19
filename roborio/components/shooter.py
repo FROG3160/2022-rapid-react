@@ -96,7 +96,6 @@ class Flywheel:
 class Intake:
     retrieve: Solenoid
     hold: Solenoid
-    launch: Solenoid
 
     def __init__(self):
         pass
@@ -113,20 +112,14 @@ class Intake:
     def deactivateHold(self):
         self.hold.set(False)
 
-    def activateLaunch(self):
-        self.launch.set(True)
-
-    def deactivateLaunch(self):
-        self.launch.set(False)
-
     def execute(self):
         pass
 
 
 class FROGShooter:
-    lidar: FROGdar
     lowerFlywheel: Flywheel
     upperFlywheel: Flywheel
+    launch: Solenoid
 
     def __init__(self):
         self._enable = False
@@ -184,6 +177,12 @@ class FROGShooter:
     def setUpperRatio(self, val: int):
         self.ratio_upper = val
 
+    def activateLaunch(self):
+        self.launch.set(True)
+
+    def deactivateLaunch(self):
+        self.launch.set(False)
+
     @feedback()
     def getLowerRatio(self):
         return self.ratio_lower
@@ -191,11 +190,6 @@ class FROGShooter:
     @feedback()
     def getUpperRatio(self):
         return self.ratio_upper
-
-    @feedback()
-    def getdistance(self):
-        # get the value/distance from the lidar in inches
-        return self.lidar.getDistance()
 
     def execute(self):
         if self._enabled:
