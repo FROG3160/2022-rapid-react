@@ -1,8 +1,10 @@
+import wpilib
 from navx import AHRS
 from magicbot import feedback
 from ctre import CANifier
 import wpilib
 from .common import Buffer
+from rev import ColorSensorV3
 import math 
 
 BUFFERLEN = 50
@@ -116,6 +118,31 @@ class FROGdar:
             self.rangeBuffer.clear()
             self.targetRange = None
 
+            
+class FROGColor:
+
+    def __init__(self):
+        self.enabled = False
+        self.colorSensor = ColorSensorV3(wpilib.I2C.Port.kOnboard)
+
+    def enable(self):
+        self.enabled = True
+
+    def disable(self):
+        self.enabled = False
+
+    @feedback(key='Red')
+    def getRed(self):
+        return self.colorSensor.getColor().red
+
+    @feedback(key='Blue')
+    def getBlue(self):
+        return self.colorSensor.getColor().blue
+
+    def execute(self):
+        pass
+
+
 class FROGsonic:
 
     def __init__(self):
@@ -129,4 +156,4 @@ class FROGsonic:
 
     def getInches(self):
         self.USVolt = self.CargoUltrasonic.getVoltage()
-        self.USInchRange = (self.USVolt * 5/ 0.00488) * 0.039
+        return (self.USVolt * 5/ 0.00488) * 0.039
