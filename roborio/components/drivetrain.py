@@ -36,7 +36,7 @@ kMaxMetersPerSec = kMaxFeetPerSec * 0.3038
 kMaxRevolutionsPerSec = 1
 kMaxRadiansPerSec = kMaxRevolutionsPerSec * 2 * math.pi
 
-kWheelDiameter = 0.1016  # in meters  TODO: Confirm this value
+kWheelDiameter = 0.1000125  # 3 15/16 inches in meters
 kFalconTicksPerRotation = 2048
 kFalconMaxRPM = 6380
 kCANCoderTicksPerRotation = 4096
