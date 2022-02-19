@@ -111,9 +111,9 @@ class FROGbot(magicbot.MagicRobot):
         # PCM
         self.pcm = PneumaticsControlModule(1)
         # Solenoids for shooter
-        self.intake_retrieve = Solenoid(CTRE_PCM, 0)
+        self.intake_retrieve = Solenoid(CTRE_PCM, 2)
         self.intake_hold = Solenoid(CTRE_PCM, 1)
-        self.intake_launch = Solenoid(CTRE_PCM, 2)
+        self.intake_launch = Solenoid(CTRE_PCM, 0)
 
         # config for saitek joystick
         # self.driveStick = FROGStick(0, 0, 1, 3, 2)
@@ -173,10 +173,17 @@ class FROGbot(magicbot.MagicRobot):
         else:
             self.intake.deactivateHold()
 
-        if self.gunnerControl.getRightBumper():
+        if self.gunnerControl.getRightTriggerAxis() < 0.5:
             self.intake.activateLaunch()
         else:
             self.intake.deactivateLaunch()
+
+        if self.gunnerControl.getRightBumper():
+            self.intake.activateRetrieve()
+        else:
+            self.intake.deactivateRetrieve()
+
+        
 
         # toggles self.objectTargeted
         if self.gunnerControl.getBButtonReleased():
