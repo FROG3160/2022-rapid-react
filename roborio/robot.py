@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-from asyncio.tasks import _T1
 from inspect import ArgSpec
 from sre_parse import State
 import statistics
@@ -22,7 +21,7 @@ from components import drivetrain
 from wpimath import trajectory, controller, geometry
 from wpimath.trajectory import constraint, TrapezoidProfileRadians, TrapezoidProfile
 import math
-from wpimath.controller import PIDController, ProfiledPIDController, HolonomicDriveController
+from wpimath.controller import PIDController, ProfiledPIDControllerRadians, HolonomicDriveController
 
 # robot characteristics
 # we are specifying inches and dividing by 12 to get feet,
@@ -131,8 +130,8 @@ class FROGbot(magicbot.MagicRobot):
         pass
 
     def autonomousInit(self):
-        self.vision.setAllianceColor(self,drivetrain.getAlliance)
-        self.automodes.start()
+        # self.vision.setAllianceColor(self,drivetrain.getAlliance)
+        
        
         # Defining some variables
         self.pose = Pose2d(Translation2d(2,2), Rotation2d(0))
@@ -142,14 +141,15 @@ class FROGbot(magicbot.MagicRobot):
         
         # TrajectoryConfig
         trajectoryConfig = trajectory.TrajectoryConfig(maxVelocity, maxAcceleration)
-        MinMaxAcceleration = constraint.TrajectoryConstraint.minMaxAcceleration(Pose2d, radianValueFor10dgrs, 2)
+       
+        '''MinMaxAcceleration = constraint.TrajectoryConstraint.minMaxAcceleration(Pose2d(Translation2d(0,0)), Rotation2d(0), radianValueFor10dgrs, 2)
         trajectoryConfig.setKinematics(SwerveDrive4Kinematics)
         trajectoryConfig.setStartVelocity(2)
         trajectoryConfig.setEndVelocity(0)
         trajectoryConfig.setReversed(False)
         trajectoryConfig.startVelocity()
         trajectoryConfig.endVelocity()
-        trajectoryConfig.isReversed()
+        trajectoryConfig.isReversed()'''
         
 
         #TrajectoryGenerate
@@ -161,27 +161,42 @@ class FROGbot(magicbot.MagicRobot):
 
      
         #HolonomicDriveController(Swerve Controller)
-        radiansProfile = trajectory.TrapezoidProfileRadians()
-        radiansProfile.Constraints(maxVelocity, maxAcceleration)
-        radiansProfile.State(0, 0)
+        
+       
+        state = trajectory.TrapezoidProfileRadians.State(0, 0)
+        '''initialState = trajectory.TrapezoidProfileRadians.State(0, 0)
+        radiansProfile = trajectory.TrapezoidProfileRadians(constraint, state, initialState)
         radiansProfile.calculate(1)
         radiansProfile.isFinished(1)
-        radiansProfile.timeLeftUntil(0)
-        radiansProfile.totalTime()
-        swerveController = controller.HolonomicDriveController(controller.PIDController(1, 0, 0),
-        controller.PIDController(1, 0, 0), controller.ProfiledPIDController(1, 0, 0, radiansProfile, 0.02))
-        swerveController.atReference()
-        swerveController.calculate(Pose2d, maxAcceleration, Rotation2d)
+        radiansProfile.timeLeftUntil()
+        radiansProfile.totalTime()'''
+        
+        
+        Constraint = trajectory.TrapezoidProfileRadians.Constraints(maxVelocity, maxAcceleration)
+        xController = controller.PIDController(1, 0, 0, 0.02)
+        yController = controller.PIDController(1, 0, 0, 0.02)
+        angleController = controller.ProfiledPIDControllerRadians(1, 0, 0, Constraint, 0.02)
+        # According to the docs it says that we need all of the below methods, but the example code has only the enableContinuousInput method
+        angleController.atGoal()
+        angleController.atSetpoint()
+        angleController.calculate(0)
+        angleController.enableContinuousInput(-1, 1)
+        
+
+        
+        swerveController = controller.HolonomicDriveController(xController, yController, angleController)
+        '''swerveController.atReference()
+        swerveController.calculate(Pose2d, Pose2d, Rotation2d)
         swerveController.setEnabled(True)
-        swerveController.setTolerance(Pose2d)
+        swerveController.setTolerance(Pose2d)'''
         
 
         # Trajectory sample method
         # Not sure if we need the rest of those methods
         trajectorystate = trajectory.Trajectory()
-        trajectorystate.State(1, 2, maxAcceleration, Pose2d, radianValueFor10dgrs)
+        '''trajectorystate.State(1, 2, maxAcceleration, Pose2d, radianValueFor10dgrs)
         trajectorystate.initialPose()
-        trajectorystate.relativeTo(Pose2d)
+        trajectorystate.relativeTo(Pose2d)'''
         sample = trajectorystate.sample(1)
         trajectorystate.states()
         
@@ -189,8 +204,8 @@ class FROGbot(magicbot.MagicRobot):
         adjustedSpeeds = swerveController.calculate(drivetrain.SwerveDrive4Odometry.getPose(), sample, geometry.Rotation2d.fromDegrees(0))
         
         # Adjusted ChassisSpeeds to the Swerve Chassis
+        self.swerveChassis.setChassisSpeeds(adjustedSpeeds) 
         
-
 
         #Called on each iteration of the control loop
 
