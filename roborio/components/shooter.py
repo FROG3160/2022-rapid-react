@@ -6,9 +6,11 @@ from ctre import (
     NeutralMode,
     TalonFXInvertType,
 )
-from magicbot import feedback
+from magicbot import feedback, state, timed_state
+from magicbot.state_machine import StateMachine
 from components.common import TalonPID
-from components.sensors import FROGdar
+from components.sensors import FROGdar, FROGsonic
+from components.vision import FROGVision
 
 
 # TODO Find out the Min/Max of the velocity and the tolerence for the Flywheel
@@ -21,6 +23,8 @@ FLYWHEEL_MAX_DECEL = -FLYWHEEL_MAX_ACCEL
 FLYWHEEL_INCREMENT = 100
 FLYWHEEL_VEL_TOLERANCE = 100
 FLYWHEEL_LOOP_RAMP = 0.25
+
+ULTRASONIC_DISTANCE_INCHES = 8.67
 
 
 class Flywheel:
@@ -103,6 +107,12 @@ class Intake:
     def activateRetrieve(self):
         self.retrieve.set(True)
 
+    def extendGrabber(self):
+        self.retrieve.set(True)
+
+    def retractGrabber(self):
+        self.retrieve.set(False)
+
     def deactivateRetrieve(self):
         self.retrieve.set(False)
 
@@ -177,11 +187,11 @@ class FROGShooter:
     def setUpperRatio(self, val: int):
         self.ratio_upper = val
 
-    def activateLaunch(self):
-        self.launch.set(True)
-
-    def deactivateLaunch(self):
+    def raiseLaunch(self):
         self.launch.set(False)
+
+    def dropLaunch(self):
+        self.launch.set(True)
 
     @feedback()
     def getLowerRatio(self):
@@ -199,7 +209,59 @@ class FROGShooter:
                 pass
             else:
                 self.lowerFlywheel.setVelocity(self._flywheel_speeds)
-                self.upperFlywheel.setVelocity(self._flywheel_speeds*(1/(self.ratio_lower/self.ratio_upper)))
+                self.upperFlywheel.setVelocity(
+                    self._flywheel_speeds
+                    * (1 / (self.ratio_lower / self.ratio_upper))
+                )
 
                 # run the motors at the speeds they already have
                 pass
+
+
+class ShooterControl(StateMachine):
+    intake: Intake
+    shooter: FROGShooter
+    sonic: FROGsonic
+    vision: FROGVision
+
+    # def __init__(self):
+    #     self.state = 'Empty'
+
+    @state(first=True)
+    def waitForBall(self):
+        if self.isInRange():
+            self.next_state("grab")
+
+    @timed_state(duration=0.5, must_finish=True)
+    def grab(self):
+        # extend arms and grab ball
+        self.intake.extendGrabber()
+        self.next_state("retrieve")
+
+    @timed_state(duration=0.5, must_finish=True)
+    def retrieve(self):
+        # pull ball in while dropping launch
+        self.intake.retractGrabber()
+        self.shooter.dropLaunch()
+        self.next_state("hold")
+
+    @timed_state(duration=0.25, must_finish=True)
+    def fire(self):
+        # raise launch, grab resets
+        self.shooter.raiseLaunch()
+        self.next_state("release")
+
+    @timed_state(duration=0.25, must_finish=True)
+    def hold(self):
+        # clamp onto ball
+        self.intake.activateHold()
+        self.next_state("fire")
+
+    @state()
+    def release(self):
+        self.intake.deactivateHold()
+        self.done()
+
+    @feedback()
+    def isInRange(self):
+        return self.sonic.getInches() <= ULTRASONIC_DISTANCE_INCHES
