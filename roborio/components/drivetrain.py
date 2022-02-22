@@ -12,7 +12,7 @@ from ctre import (
     BaseTalonPIDSetConfiguration,
 )
 from wpilib import Field2d
-from wpimath.geometry import Translation2d, Rotation2d
+from wpimath.geometry import Translation2d, Rotation2d, Pose2d
 from wpimath.kinematics import (
     SwerveDrive4Kinematics,
     SwerveDrive4Odometry,
@@ -22,6 +22,8 @@ from wpimath.kinematics import (
 import math
 from magicbot import feedback
 from .sensors import FROGGyro
+import wpimath
+from wpimath import trajectory
 
 
 # Motor Control modes
@@ -44,7 +46,7 @@ kVelocityMultiplier = kTicksPerRotation / (10 * kWheelDiameter * math.pi)
 # CANCoder base config
 # Offset will be different for each module and will need to be
 # set during SwerveModule.setup()
-cfgSteerEncoder = CANCoderConfiguration()
+cfgSteerEncoder = CANCoderConfiguration() 
 cfgSteerEncoder.sensorDirection = False  # CCW spin of magnet is positive
 cfgSteerEncoder.initializationStrategy = (
     SensorInitializationStrategy.BootToAbsolutePosition
@@ -82,6 +84,7 @@ class SwerveModule:
     encoder: WPI_CANCoder
     location: Translation2d
     steerOffset: float
+
 
     def __init__(self):
         # set initial states for the component
@@ -182,7 +185,6 @@ class SwerveModule:
 
 
 class SwerveChassis:
-    # TODO: Add gyro to chassis, needed for field-oriented movement
     swerveFrontLeft: SwerveModule
     swerveFrontRight: SwerveModule
     swerveBackLeft: SwerveModule
@@ -194,6 +196,9 @@ class SwerveChassis:
         self.enabled = False
         self.speeds = ChassisSpeeds(0, 0, 0)
         self.center = Translation2d(0, 0)
+        self.pose = Pose2d(Translation2d(2,2), Rotation2d(0))
+        
+
 
     def disable(self):
         self.enabled = False
@@ -221,6 +226,11 @@ class SwerveChassis:
             vT * kMaxRadiansPerSec,
             Rotation2d.fromDegrees(-self.gyro.getAngle()),
         )
+        
+    def setChassisSpeeds(self, speeds):
+       self.speeds =  speeds
+
+
 
     def enable(self):
         self.enabled = True
