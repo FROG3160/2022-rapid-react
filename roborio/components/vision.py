@@ -36,6 +36,14 @@ class FROGVision:
         self.GoalYawBuff = Buffer(5)
         self.allianceColor = self.driverstation.getAlliance()
 
+        self.deactivateDriverMode()
+
+    def activateDriverMode(self):
+        self.CARGOcam.setDriverMode(True)
+
+    def deactivateDriverMode(self):
+        self.CARGOcam.setDriverMode(False)
+
     def getAllianceColor(self):
         return self.allianceColor
 
@@ -66,10 +74,14 @@ class FROGVision:
     def getCargoY(self):
         if target := self.CargoTarget.getPitch():
             return target / LC_Y_div
-
+    
+    @feedback(key="Cargo Y")
     def getCargoYAverage(self):
         if target := self.CargoPitchBuff.average():
             return target / LC_Y_div
+
+    def getDriverMode(self):
+        self.CARGOcam.getDriverMode()
 
     def setCargoAllianceColor(self):
         self.CARGOcam.setPipelineIndex(self.allianceColor + 1)
