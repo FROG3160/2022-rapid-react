@@ -129,55 +129,49 @@ class PowerCurve:
 
 class DriveUnit:
     def __init__(
-        self, gear_stages: list, motor_rpm: int, diameter: int, cpr: int
+        self, gear_stages: list, motor_rpm: int, diameter: float, cpr: int
     ):
+        """Constructs a DriveUnit object that stores data about the drive, gear stages, and wheel.
+              The gear_stages is a list of tuples where each tuple defines one stage .e.g. (14, 28)
+
+        Args:
+            gear_stages (list): list of gear stages expressed as tuples of two integers e.g. [(10, 32), (9, 24)]
+            motor_rpm (int): Maximum rpm of the attached motor
+            diameter (float): Diameter of the attached wheel in meters
+            cpr (int): Number of encoder counts per revolution
+        """
         self.gearing = math.prod(gear_stages)
         self.motor_rpm = motor_rpm
         self.cpr = cpr
         self.circumference = math.pi * diameter
 
-    def speedToVelocity(self, speed):
+    def speedToVelocity(self, speed: float) -> float:
+        """Converts linear speed to Falcon velocity
+
+        Args:
+            speed (float): desired linear speed in meters per second
+
+        Returns:
+            float: velocity in encoder counts per 100ms
+        """
         wheel_rotations_sec = speed / self.circumference
         motor_rotations_sec = wheel_rotations_sec / self.gearing
         ticks_per_sec = motor_rotations_sec * self.cpr
         return ticks_per_sec / 10
 
-    def velocityToSpeed(self, velocity):
+    def velocityToSpeed(self, velocity: float) -> float:
+        """Converts Falcon velocity to linear speed
+
+        Args:
+            velocity (float): velocity in encoder counts per 100ms
+
+        Returns:
+            float: linear speed in meters per second
+        """
         ticks_per_sec = velocity * 10
         motor_rotations_sec = ticks_per_sec / self.cpr
         wheel_rotations_sec = motor_rotations_sec * self.gearing
         return wheel_rotations_sec * self.circumference
-
-
-def swerve_optimize(state: SwerveModuleState, current_angle: float):
-    # we expect swerve_angle to be between -180 and 180
-    # get deltat between commanded angle and current angle
-    print("=====================\nOriginal Angle:", current_angle)
-    delta_angle, speed_invert = deltaAngle(state.angle.degrees(), current_angle)
-    new_angle = current_angle + delta_angle
-    new_speed = [state.speed, -state.speed][speed_invert]
-    # print("Requested Angle: ", state.angle.degrees())
-    # print("Angle Delta: ", delta_angle)
-    # print("New Angle: ", new_angle)
-    # print("----------")
-    # print("Requested Speed: ", state.speed)
-    # print("New Speed: ", new_speed)
-
-    return SwerveModuleState(new_speed, Rotation2d.fromDegrees(new_angle))
-
-
-def deltaAngle(new_angle, current_angle):
-    delta = new_angle - current_angle
-    reverse_speed = False
-    if abs(delta) > 90:
-        #
-        delta = delta - math.copysign(180, delta)
-        reverse_speed = True
-        if abs(delta) > 90:
-            delta = delta - math.copysign(180, delta)
-            reverse_speed = False
-
-    return (delta, reverse_speed)
 
 
 if __name__ == "__main__":
@@ -185,9 +179,4 @@ if __name__ == "__main__":
         [(14.0 / 50.0), (27.0 / 17.0), (15.0 / 45.0)], 6380, 0.10033, 2048
     )
     scaled = Rescale((-1, 1), (-180, 180), 0.2)
-    for x in range(-180, 180, 15):
-        for y in range(-180, 180, 15):
-            swerve_optimize(
-                SwerveModuleState(0.5, Rotation2d.fromDegrees(y)), x
-            )
     pass
