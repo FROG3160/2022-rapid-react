@@ -178,6 +178,20 @@ class SwerveModule:
     def getCommandedTicks(self):
         return self.cancoderDegreesToTicks(self.state.angle.degrees())
 
+    def getCurrentSpeed(self):
+        return self.drive_unit.velocityToSpeed(
+            self.drive.getSelectedSensorVelocity()
+        )
+
+    def getCurrentPosition(self):
+        return self.getEncoderAbsolutePosition()
+
+    def getCurrentState(self):
+        return SwerveModuleState(
+            self.getCurrentSpeed(),
+            Rotation2d.fromDegrees(self.getCurrentPosition()),
+        )
+
     @feedback()
     def getSteerPosition(self):
         return self.steer.getSelectedSensorPosition(0)
@@ -209,6 +223,7 @@ class SwerveModule:
 
         # configure CANCoder
         # No worky: self.encoder.configAllSettings(cfgSteerEncoder)
+        # TODO: see if we can use the configAllSettings method again
         self.encoder.configAbsoluteSensorRange(
             AbsoluteSensorRange.Signed_PlusMinus180
         )
@@ -241,7 +256,7 @@ class SwerveModule:
         # configure drive motor
         self.drive.configAllSettings(cfgDriveMotor)
         self.drive.setInverted(TalonFXInvertType.Clockwise)
-        self.drive.configClosedloopRamp(.25)
+        self.drive.configClosedloopRamp(0.25)
 
     def setState(self, state):
         # adjusts the speed and angle for minimal change
@@ -387,15 +402,20 @@ class SwerveChassis:
             states = self.kinematics.desaturateWheelSpeeds(
                 states, kMaxMetersPerSec
             )
+
             # pairing the module with the state it should get and
             # sending the state to the associated module
-
-            # updating odometry to keep track of position and angle
-            self.odometry.update(Rotation2d(self.gyro.getAngle()), *states)
-            self.field.setRobotPose(self.odometry.getPose())
-
             for module, state in zip(self.modules, states):
                 module.setState(state)
+
+            # get current states back from modules
+            #current_states = [x.getCurrentState() for x in self.modules]
+
+            # updating odometry to keep track of position and angle
+            self.odometry.update(
+                Rotation2d(self.gyro.getAngle()), *states
+            )
+            self.field.setRobotPose(self.odometry.getPose())
 
         else:
             pass

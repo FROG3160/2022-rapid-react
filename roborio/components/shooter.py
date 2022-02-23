@@ -227,41 +227,47 @@ class ShooterControl(StateMachine):
     # def __init__(self):
     #     self.state = 'Empty'
 
-    @state(first=True)
-    def waitForBall(self):
-        if self.isInRange():
-            self.next_state("grab")
+    @state(first=True, must_finish=True)
+    def waitForBall(self, initial_call):
+        if initial_call:
+            self.reset_pneumatics()
 
-    @timed_state(duration=0.5, must_finish=True)
-    def grab(self):
-        # extend arms and grab ball
-        self.intake.extendGrabber()
-        self.next_state("retrieve")
+        # if self.isInRange():
+        #     self.next_state("grab")
 
-    @timed_state(duration=0.5, must_finish=True)
-    def retrieve(self):
+    @timed_state(duration=1, must_finish=True, next_state="retrieve")
+    def grab(self, initial_call):
+        if initial_call:
+            # extend arms and grab ball
+            self.intake.extendGrabber()
+
+    @timed_state(duration=5, must_finish=True, next_state="hold")
+    def retrieve(self, initial_call):
         # pull ball in while dropping launch
-        self.intake.retractGrabber()
-        self.shooter.dropLaunch()
-        self.next_state("hold")
+        if initial_call:
+            self.intake.retractGrabber()
+            self.shooter.dropLaunch()
 
-    @timed_state(duration=0.25, must_finish=True)
-    def fire(self):
-        # raise launch, grab resets
-        self.shooter.raiseLaunch()
-        self.next_state("release")
-
-    @timed_state(duration=0.25, must_finish=True)
+    @state()
     def hold(self):
         # clamp onto ball
         self.intake.activateHold()
-        self.next_state("fire")
+
+    @timed_state(duration=2, must_finish=True, next_state="release")
+    def fire(self, initial_call):
+        if initial_call:
+            # raise launch, grab resets
+            self.shooter.raiseLaunch()
 
     @state()
     def release(self):
-        self.intake.deactivateHold()
-        self.done()
+        self.reset_pneumatics()
 
     @feedback()
     def isInRange(self):
         return self.sonic.getInches() <= ULTRASONIC_DISTANCE_INCHES
+
+    def reset_pneumatics(self):
+        self.intake.deactivateHold()
+        self.shooter.raiseLaunch()
+        self.intake.deactivateRetrieve()
