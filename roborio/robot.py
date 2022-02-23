@@ -18,10 +18,11 @@ from components.sensors import FROGGyro, FROGdar
 from components.shooter import FROGShooter, Flywheel, Intake
 from components.drivetrain import SwerveChassis
 from components import drivetrain
-from wpimath import trajectory, controller, geometry
+from wpimath import trajectory, controller, geometry, kinematics
 from wpimath.trajectory import constraint, TrapezoidProfileRadians, TrapezoidProfile
 import math
 from wpimath.controller import PIDController, ProfiledPIDControllerRadians, HolonomicDriveController
+
 
 # robot characteristics
 # we are specifying inches and dividing by 12 to get feet,
@@ -138,12 +139,17 @@ class FROGbot(magicbot.MagicRobot):
         maxVelocity = 4.96824
         maxAcceleration = 2.48412
         radianValueFor10dgrs = 0.17453293
-        
+        Translation2d
         # TrajectoryConfig
         trajectoryConfig = trajectory.TrajectoryConfig(maxVelocity, maxAcceleration)
-       
+        
+
+        
+        
+        trajectoryConfig.setKinematics(self.swerveChassis.kinematics)
+        
         '''MinMaxAcceleration = constraint.TrajectoryConstraint.minMaxAcceleration(Pose2d(Translation2d(0,0)), Rotation2d(0), radianValueFor10dgrs, 2)
-        trajectoryConfig.setKinematics(SwerveDrive4Kinematics)
+        trajectoryConfig.setKinematics(swerveKinematics)
         trajectoryConfig.setStartVelocity(2)
         trajectoryConfig.setEndVelocity(0)
         trajectoryConfig.setReversed(False)
@@ -184,13 +190,13 @@ class FROGbot(magicbot.MagicRobot):
         
 
         
-        swerveController = controller.HolonomicDriveController(xController, yController, angleController)
+        self.swerveController = controller.HolonomicDriveController(xController, yController, angleController)
         '''swerveController.atReference()
         swerveController.calculate(Pose2d, Pose2d, Rotation2d)
         swerveController.setEnabled(True)
         swerveController.setTolerance(Pose2d)'''
         
-
+    def autonomousPeriodic(self):
         # Trajectory sample method
         # Not sure if we need the rest of those methods
         trajectorystate = trajectory.Trajectory()
@@ -198,13 +204,14 @@ class FROGbot(magicbot.MagicRobot):
         trajectorystate.initialPose()
         trajectorystate.relativeTo(Pose2d)'''
         sample = trajectorystate.sample(1)
-        trajectorystate.states()
+        
+
         
         # Passing sample into calculate() method 
-        adjustedSpeeds = swerveController.calculate(drivetrain.SwerveDrive4Odometry.getPose(), sample, geometry.Rotation2d.fromDegrees(0))
+        adjustedSpeeds = self.swerveController.calculate(drivetrain.SwerveDrive4Odometry.getPose(), sample, geometry.Rotation2d.fromDegrees(0))
         
         # Adjusted ChassisSpeeds to the Swerve Chassis
-        self.swerveChassis.setChassisSpeeds(adjustedSpeeds) 
+        self.swerveChassis.setChassisSpeeds(adjustedSpeeds)
         
 
         #Called on each iteration of the control loop
