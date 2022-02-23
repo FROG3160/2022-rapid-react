@@ -159,7 +159,7 @@ class FROGbot(magicbot.MagicRobot):
         
 
         #TrajectoryGenerate
-        trajectoryGenerator =  trajectory.TrajectoryGenerator.generateTrajectory(
+        self.trajectoryGenerator =  trajectory.TrajectoryGenerator.generateTrajectory(
 			geometry.Pose2d(Translation2d(0, 0), geometry.Rotation2d.fromDegrees(0)), # Starting position
 			[geometry.Translation2d(2,1), geometry.Translation2d(3,2), geometry.Translation2d(2,3), geometry.Translation2d(1,2)], # Waypoints
 			geometry.Pose2d(0, 0, geometry.Rotation2d.fromDegrees(0)), # Ending position
@@ -195,21 +195,24 @@ class FROGbot(magicbot.MagicRobot):
         swerveController.calculate(Pose2d, Pose2d, Rotation2d)
         swerveController.setEnabled(True)
         swerveController.setTolerance(Pose2d)'''
-        
+
+        self.Timer = wpilib.Timer()
+        self.Timer.start()
+      
     def autonomousPeriodic(self):
         # Trajectory sample method
         # Not sure if we need the rest of those methods
-        trajectorystate = trajectory.Trajectory()
+        #trajectorystate = trajectory.Trajectory()
         '''trajectorystate.State(1, 2, maxAcceleration, Pose2d, radianValueFor10dgrs)
         trajectorystate.initialPose()
         trajectorystate.relativeTo(Pose2d)'''
-        sample = trajectorystate.sample(1)
-        
+        print(self.Timer.get())
+        sample = self.trajectoryGenerator.sample(self.Timer.get())
+        print(sample)
 
-        
         # Passing sample into calculate() method 
-        adjustedSpeeds = self.swerveController.calculate(drivetrain.SwerveDrive4Odometry.getPose(), sample, geometry.Rotation2d.fromDegrees(0))
-        
+        adjustedSpeeds = self.swerveController.calculate(self.swerveChassis.odometry.getPose(), sample, geometry.Rotation2d.fromDegrees(0))
+        print('Speeds: ', adjustedSpeeds)
         # Adjusted ChassisSpeeds to the Swerve Chassis
         self.swerveChassis.setChassisSpeeds(adjustedSpeeds)
         
@@ -255,11 +258,11 @@ class FROGbot(magicbot.MagicRobot):
 
     def testInit(self):
         """Called when test mode starts; optional"""
-        pass
+        self.autonomousInit()
 
     def testPeriodic(self):
         """Called on each iteration of the control loop"""
-        pass
+        self.autonomousPeriodic()
 
 
 if __name__ == "__main__":
