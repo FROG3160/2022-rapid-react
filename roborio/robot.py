@@ -126,7 +126,7 @@ class FROGbot(magicbot.MagicRobot):
         self.sonic_mv = 9.8
 
         # PCM
-        self.pcm = PneumaticsControlModule(1)
+        #self.pcm = PneumaticsControlModule()
         # Solenoids for shooter
         self.intake_retrieve = Solenoid(CTRE_PCM, 2)
         self.intake_hold = Solenoid(CTRE_PCM, 1)
@@ -180,7 +180,7 @@ class FROGbot(magicbot.MagicRobot):
         """Called when teleop starts; optional"""
         self.swerveChassis.enable()
         self.autoTargeting = False
-        self.firecontrol.engage()
+        #self.firecontrol.engage()
 
     def getRotationPID(self, target):
         self.rotationController.setP(self.rotationP)
@@ -190,6 +190,9 @@ class FROGbot(magicbot.MagicRobot):
 
     def teleopPeriodic(self):
         """Called on each iteration of the control loop"""
+
+        # if not self.firecontrol.is_executing:
+        #     self.firecontrol.engage()
 
         # Get gunner controls
         if self.gunnerControl.getYButtonReleased():
@@ -203,18 +206,20 @@ class FROGbot(magicbot.MagicRobot):
 
         if self.gunnerControl.getRightTriggerAxis() > 0.5:
             self.firecontrol.next_state("fire")
+            self.firecontrol.engage()
 
         if self.gunnerControl.getRightBumperPressed():
             self.firecontrol.next_state("grab")
+            self.firecontrol.engage()
 
-        if self.gunnerControl.getRightBumperReleased():
-            self.firecontrol.next_state("retrieve")
+        # if self.gunnerControl.getRightBumperReleased():
+        #     self.firecontrol.next_state("retrieve")
 
-        if self.gunnerControl.getLeftBumperPressed():
-            self.firecontrol.next_state("hold")
+        # if self.gunnerControl.getLeftBumperPressed():
+        #     self.firecontrol.next_state("hold")
 
-        if self.gunnerControl.getLeftBumperReleased():
-            self.firecontrol.next_state("release")
+        # if self.gunnerControl.getLeftBumperReleased():
+        #     self.firecontrol.next_state("release")
 
         # toggles self.objectTargeted
         if self.gunnerControl.getBButtonReleased():
