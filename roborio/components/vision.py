@@ -80,22 +80,30 @@ class FROGVision:
     @feedback
     def getFilteredCargoX(self):
         if self.hasCargoTargets:
-            return self.getFilteredCargoX
+            return self.filteredCargoX
+        else:
+            return 'None'
 
     @feedback
     def getFilteredCargoY(self):
         if self.hasCargoTargets:
-            return self.getFilteredCargoY
+            return self.filteredCargoY
+        else:
+            return 'None'
 
     @feedback
     def getFilteredGoalX(self):
         if self.hasGoalTargets:
-            return self.getFilteredGoalX
+            return self.filteredGoalX
+        else:
+            return 'None'
 
     @feedback
     def getFilteredGoalY(self):
         if self.hasGoalTargets:
-            return self.getFilteredGoalY
+            return self.filteredGoalY
+        else:
+            return 'None'
 
     def getGoalX(self):
         if target := self.GoalTarget.getYaw():
@@ -164,10 +172,10 @@ class FROGVision:
         self.CargoResults = self.CARGOcam.getLatestResult()
         if self.CargoResults.hasTargets():
             self.hasCargoTargets = True
+            self.CargoTarget = self.CargoResults.getBestTarget()
             # Adds the most recent result to the buffers.
             self.CargoYawBuff.append(self.CargoTarget.getYaw())
             self.CargoPitchBuff.append(self.CargoTarget.getPitch())
-            self.CargoTarget = self.CargoResults.getBestTarget()
             self.updateCargoFilters()
         else:
             self.hasCargoTargets = False
@@ -176,8 +184,8 @@ class FROGVision:
         self.GoalResults = self.Goalcam.getLatestResult()
         if self.GoalResults.hasTargets():
             self.hasGoalTargets = True
-            self.GoalYawBuff.append(self.GoalTarget.getYaw())
             self.GoalTarget = self.GoalResults.getBestTarget()
+            self.GoalYawBuff.append(self.GoalTarget.getYaw())
             self.updateGoalFilters()
         else:
             self.hasGoalTargets = False
