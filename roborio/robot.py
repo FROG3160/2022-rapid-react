@@ -108,10 +108,10 @@ class FROGbot(magicbot.MagicRobot):
             -trackwidth / 2,
         )
 
-        self.swerveFrontLeft_steerOffset = 13.008
-        self.swerveFrontRight_steerOffset = 171.914
-        self.swerveBackLeft_steerOffset = 22.764
-        self.swerveBackRight_steerOffset = -43.242
+        self.swerveFrontLeft_steerOffset = 18.5449219 #13.008
+        self.swerveFrontRight_steerOffset = 174.023438 #171.914
+        self.swerveBackLeft_steerOffset = 23.0273438 #22.764
+        self.swerveBackRight_steerOffset = -43.41797 #-43.242
 
         # flywheel motors
         self.lowerFlywheel_motor = WPI_TalonFX(41)

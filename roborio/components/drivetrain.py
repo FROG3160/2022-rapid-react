@@ -40,6 +40,8 @@ kWheelDiameter = 0.1000125  # 3 15/16 inches in meters
 kFalconTicksPerRotation = 2048
 kFalconMaxRPM = 6380
 kCANCoderTicksPerRotation = 4096
+kCANCoderTicksPerDegree = kCANCoderTicksPerRotation / 360
+kCANCoderTicksPerRadian = kCANCoderTicksPerRotation / math.tau
 # the multiple of 10 in the divisor is to get to how many ticks per 100ms
 # or 1/10th of a second.  Multiplying the speed of SwerveModuleState by
 # this multiplier will give us the velocity to give the TalonFX in ticks/100ms
@@ -58,7 +60,6 @@ cfgSteerEncoder.initializationStrategy = (
 cfgSteerEncoder.absoluteSensorRange = AbsoluteSensorRange.Signed_PlusMinus180
 
 # Steer Motor base config
-# TODO: Tune and adjust PID
 cfgSteerMotor = TalonFXConfiguration()
 cfgSteerMotor.remoteFilter0.remoteSensorSource = RemoteSensorSource.CANCoder
 cfgSteerMotor.primaryPID = BaseTalonPIDSetConfiguration(
@@ -68,10 +69,11 @@ cfgSteerMotor.slot0.kP = 1.2
 cfgSteerMotor.slot0.kI = 0.0001
 cfgSteerMotor.slot0.kD = 0.0
 cfgSteerMotor.slot0.kF = 0.0
+""" TODO: test if we can remove this.  The current value amounts to
+  about .44 degrees allowed error. """
 cfgSteerMotor.slot0.allowableClosedloopError = 5
 
 # Drive Motor base config
-# TODO: Tune and adjust PID
 cfgDriveMotor = TalonFXConfiguration()
 cfgDriveMotor.initializationStrategy = SensorInitializationStrategy.BootToZero
 cfgDriveMotor.primaryPID = BaseTalonPIDSetConfiguration(
@@ -80,7 +82,7 @@ cfgDriveMotor.primaryPID = BaseTalonPIDSetConfiguration(
 cfgDriveMotor.slot0.kP = 0.0
 cfgDriveMotor.slot0.kI = 0.0
 cfgDriveMotor.slot0.kD = 0.0
-cfgDriveMotor.slot0.kF = 0.058
+cfgDriveMotor.slot0.kF = 0.04664 #$0.058
 
 
 def optimize_steer_angle(new_state: SwerveModuleState, current_radians):
@@ -90,17 +92,20 @@ def optimize_steer_angle(new_state: SwerveModuleState, current_radians):
 
     Args:
         new_state (SwerveModuleState): the module state
-        current_radians (float): current angle in radians calculated from
-            this value does not have to be between -pi and pi.
+        current_radians (float): current angle in radians.
+            This value does not have to be between -pi and pi.
 
     Returns:
-        Tuple(offset: float, speed_multiplier):
+        Tuple(offset: float, speed_inversion: int):
+          offset: angle in radians to add to current position
+          speed_inversion: -1 or 1 to change speed direction
     """
 
-    # all angles are in radians
-    reverse_speed = 1
+    invert_speed = 1
 
+    # all angles are in radians
     desired_angle = new_state.angle.radians()
+
     # we are taking the radians which may be < -pi or > pi and constraining
     # it to the range of -pi to pi for our calculations
     current_angle = math.atan2(
@@ -112,23 +117,24 @@ def optimize_steer_angle(new_state: SwerveModuleState, current_radians):
     n_offset = desired_angle - current_angle
     if n_offset < -math.pi / 2:
         n_offset += math.pi
-        reverse_speed *= -1
+        invert_speed *= -1
     elif n_offset > math.pi / 2:
         n_offset -= math.pi
-        reverse_speed *= -1
+        invert_speed *= -1
 
     # if the new offset is still greater than 90 degrees, we need to flip 180
     # and reverse speed again.
 
     if n_offset < -math.pi / 2:
         n_offset += math.pi
-        reverse_speed *= -1
+        invert_speed *= -1
     elif n_offset > math.pi / 2:
         n_offset -= math.pi
-        reverse_speed *= -1
+        invert_speed *= -1
+
     if abs(n_offset) > math.pi / 2:
         print(">>>>>>>>>>>>>>>>>ERROR<<<<<<<<<<<<<<<<<<<<")
-    return n_offset, reverse_speed
+    return n_offset, invert_speed
 
 
 class SwerveModule:
@@ -150,71 +156,83 @@ class SwerveModule:
             kWheelDiameter,
             kFalconTicksPerRotation,
         )
-
+        self.calculated_velocity = 0
+        
     def disable(self):
         self.enabled = False
 
-    @feedback
     def enable(self):
         self.enabled = True
 
     @feedback()
+    # ! Not used
     def getEncoderPostion(self):
-        self.encoder.getPosition()
+        return self.encoder.getPosition()
 
-    @feedback()
-    def getEncoderAbsolutePosition(self):
-        self.encoder.getAbsolutePosition()
+    @feedback(key='EncoderAbsolutePosition')
+    def getEncoderAbsolutePosition(self) -> float:
+        """gets the absolute position from the CANCoder
 
-    @feedback()
+        Returns:
+            float: position of the sensor in degrees (-180 to 180)
+        """
+        return self.encoder.getAbsolutePosition()
+
+    #@feedback()
+    # ! Not used
     def getStateFPS(self):
         return self.state.speed_fps
 
     @feedback()
+    # ! Not used
     def getStateSpeed(self):
         return self.state.speed
-
-    @feedback()
-    def getCommandedTicks(self):
-        return self.cancoderDegreesToTicks(self.state.angle.degrees())
-
-    def getCurrentSpeed(self):
-        return self.drive_unit.velocityToSpeed(
-            self.drive.getSelectedSensorVelocity()
-        )
-
-    def getCurrentPosition(self):
-        return self.getEncoderAbsolutePosition()
-
-    def getCurrentState(self):
-        return SwerveModuleState(
-            self.getCurrentSpeed(),
-            Rotation2d.fromDegrees(self.getCurrentPosition()),
-        )
-
-    @feedback()
-    def getSteerPosition(self):
-        return self.steer.getSelectedSensorPosition(0)
-
-    def cancoderDegreesToTicks(self, degrees: float) -> float:
-        return degrees * (kCANCoderTicksPerRotation / 360)
-
-    def cancoderRadiansToTicks(self, radians: float) -> float:
-        return radians * (kCANCoderTicksPerRotation / math.tau)
-
-    def cancoderTicksToRadians(self, ticks: float) -> float:
-        return ticks * (math.tau / kCANCoderTicksPerRotation)
-
-    def ticksToDegrees(self, ticks: float) -> float:
-        return ticks * (360 / kCANCoderTicksPerRotation)
 
     # TODO: Determine which way we want these
     # to read.  Right now they are inverted
     # to visually show positive angles to the
     # right (clockwise) to match the smartdashboard
-    @feedback()
+    #@feedback()
     def getCommandedDegrees(self):
         return -self.state.angle.degrees()
+
+    #@feedback()
+    # ! Not used
+    def getCommandedTicks(self):
+        return kCANCoderTicksPerDegree * self.state.angle.degrees()
+
+    # TODO: rewrite this whole thing so execute updates attributes
+    # TODO: and the attributes are read by these methods.
+    def getCurrentRotation(self) -> Rotation2d:
+        if degrees := self.getEncoderAbsolutePosition():
+            return Rotation2d.fromDegrees(degrees)
+        else:
+            return Rotation2d.fromDegrees(0)
+
+    @feedback
+    def getCommandedVelocity(self):
+        return self.calculated_velocity
+
+    @feedback
+    def getActualVelocity(self):
+        return self.drive.getSelectedSensorVelocity()
+
+    @feedback
+    def getCurrentSpeed(self) -> float:
+        return self.drive_unit.velocityToSpeed(
+            self.drive.getSelectedSensorVelocity()
+        )
+
+    # TODO: see TODO on getCurrentRotation()
+    def getCurrentState(self):
+        return SwerveModuleState(
+            self.getCurrentSpeed(),
+            self.getCurrentRotation(),
+        )
+
+    #@feedback()
+    def getSteerPosition(self):
+        return self.steer.getSelectedSensorPosition(0)
 
     def setup(self):
         # magicbot calls setup() when creating components
@@ -223,7 +241,7 @@ class SwerveModule:
 
         # configure CANCoder
         # No worky: self.encoder.configAllSettings(cfgSteerEncoder)
-        # TODO: see if we can use the configAllSettings method again
+        # TODO: ^^ see if we can use the configAllSettings method again
         self.encoder.configAbsoluteSensorRange(
             AbsoluteSensorRange.Signed_PlusMinus180
         )
@@ -258,43 +276,36 @@ class SwerveModule:
         self.drive.setInverted(TalonFXInvertType.Clockwise)
         self.drive.configClosedloopRamp(0.25)
 
+        self.current_states = None
+        self.current_speeds = None
+
     def setState(self, state):
-        # adjusts the speed and angle for minimal change
-        # requires getting the current angle from the steer
-        # motor and creating a Rotation2d object from it.
         self.state = state
-        # self.state = state.optimize(
-        #     state,
-        #     Rotation2d.fromDegrees(
-        #         self.ticksToDegrees(self.getSteerPosition())
-        #     ),
-        # )
-        # self.state = swerve_optimize(
-        #     state,
-        #     self.ticksToDegrees(self.steer.getSelectedSensorPosition()),
-        # )
 
     def execute(self):
         # execute is called each iteration
         # define what needs to happen if the
         # component is enabled/disabled
         if self.enabled:
-            steer_adjust, speed_multiplier = optimize_steer_angle(
-                self.state, self.cancoderTicksToRadians(self.getSteerPosition())
+
+            current_steer_position = self.getSteerPosition()
+            steer_adjust_radians, speed_inversion = optimize_steer_angle(
+                self.state, current_steer_position / kCANCoderTicksPerRadian
             )
 
             # self.steer.set(POSITION_MODE, self.getCommandedTicks())
             self.steer.set(
                 POSITION_MODE,
-                self.getSteerPosition()
-                + self.cancoderRadiansToTicks(steer_adjust),
+                current_steer_position
+                + (steer_adjust_radians * kCANCoderTicksPerRadian),
             )
             # set velocity for Falcon to ticks/100ms
+            self.calculated_velocity = self.drive_unit.speedToVelocity(
+                    self.state.speed * speed_inversion
+                )
             self.drive.set(
                 VELOCITY_MODE,
-                self.drive_unit.speedToVelocity(
-                    self.state.speed * speed_multiplier
-                ),
+                self.calculated_velocity
             )
         else:
             self.drive.set(0)
@@ -312,15 +323,17 @@ class SwerveChassis:
         self.enabled = False
         self.speeds = ChassisSpeeds(0, 0, 0)
         self.center = Translation2d(0, 0)
+        self.current_states = (
+            SwerveModuleState(),
+            SwerveModuleState(),
+            SwerveModuleState(),
+            SwerveModuleState()
+        )
+        self.current_speeds = ChassisSpeeds(0, 0, 0)
 
     def disable(self):
         self.enabled = False
-        for module in [
-            self.swerveFrontLeft,
-            self.swerveFrontRight,
-            self.swerveBackLeft,
-            self.swerveBackRight,
-        ]:
+        for module in self.modules:
             module.disable()
 
     def drive(self, vX, vY, vT):
@@ -356,6 +369,15 @@ class SwerveChassis:
     @feedback()
     def getChassisT_DPS(self):
         return self.speeds.omega_dps
+
+    # # TODO: refactor... see notes on SwerveModule.getCurrentRotation()
+    @feedback
+    def getCurrentRotationDPS(self):
+        return self.current_speeds.omega_dps
+
+
+    def setCurrentSpeeds(self):
+        self.current_speeds = self.kinematics.toChassisSpeeds(self.current_states)
 
     def setup(self):
         # magicbot calls setup() when creating components
@@ -409,11 +431,11 @@ class SwerveChassis:
                 module.setState(state)
 
             # get current states back from modules
-            #current_states = [x.getCurrentState() for x in self.modules]
-
+            self.current_states = [x.getCurrentState() for x in self.modules]
+            self.setCurrentSpeeds()
             # updating odometry to keep track of position and angle
             self.odometry.update(
-                Rotation2d(self.gyro.getAngle()), *states
+                Rotation2d(self.gyro.getAngle()), *self.current_states
             )
             self.field.setRobotPose(self.odometry.getPose())
 
