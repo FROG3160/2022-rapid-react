@@ -11,17 +11,18 @@ from magicbot.state_machine import StateMachine
 from components.common import TalonPID
 from components.sensors import FROGdar, FROGsonic
 from components.vision import FROGVision
+from magicbot import tunable
 
 
 # TODO Find out the Min/Max of the velocity and the tolerence for the Flywheel
 FLYWHEEL_MODE = ControlMode.Velocity
-FLYWHEEL_PID = TalonPID(0, p=0, f=0.042)
+FLYWHEEL_PID = TalonPID(0, p=0, f=0.0475)
 FLYWHEEL_VELOCITY = 0
 FLYWHEEL_MAX_VEL = 22000  # Falcon ()
 FLYWHEEL_MAX_ACCEL = FLYWHEEL_MAX_VEL / 50
 FLYWHEEL_MAX_DECEL = -FLYWHEEL_MAX_ACCEL
 FLYWHEEL_INCREMENT = 100
-FLYWHEEL_VEL_TOLERANCE = 100
+FLYWHEEL_VEL_TOLERANCE = 500
 FLYWHEEL_LOOP_RAMP = 0.25
 
 ULTRASONIC_DISTANCE_INCHES = 8.67
@@ -51,10 +52,13 @@ class Flywheel:
     # read current encoder velocity
     @feedback(key="velocity")
     def getVelocity(self):
-        # sensor values are reversed.  we command a positive value and the
-        # sensor shows a negative one, so we negate the output
-        return -self.motor.getSelectedSensorVelocity(
-            FeedbackDevice.IntegratedSensor
+        # TODO: remove below comment if it works without negating the value.
+        # sensor values are reversed for one of the motors.  we never command
+        # them to a negative view, so we'll just get the absolute value
+        return abs(
+            self.motor.getSelectedSensorVelocity(
+                FeedbackDevice.IntegratedSensor
+            )
         )
 
     @feedback(key="commanded")
@@ -156,8 +160,8 @@ class FROGShooter:
     def setup(self):
         # these settings are different for each motor, so we
         # set them here
-        self.lowerFlywheel.motor.setInverted(TalonFXInvertType.Clockwise)
-        self.upperFlywheel.motor.setInverted(TalonFXInvertType.CounterClockwise)
+        self.lowerFlywheel.motor.setInverted(True)
+        self.upperFlywheel.motor.setInverted(False)
         self.lowerFlywheel.motor.setSensorPhase(True)
         self.upperFlywheel.motor.setSensorPhase(True)
         self.set_manual()
@@ -194,6 +198,14 @@ class FROGShooter:
         self.launch.set(True)
 
     @feedback()
+    def isReady(self):
+        return (
+            self.lowerFlywheel.isReady()
+            and self.upperFlywheel.isReady()
+            and not self._flywheel_speeds == 0
+        )
+
+    @feedback()
     def getLowerRatio(self):
         return self.ratio_lower
 
@@ -224,6 +236,8 @@ class ShooterControl(StateMachine):
     sonic: FROGsonic
     vision: FROGVision
 
+    flywheel_speed = tunable(10000)
+
     # def __init__(self):
     #     self.state = 'Empty'
 
@@ -232,8 +246,8 @@ class ShooterControl(StateMachine):
         if initial_call:
             self.reset_pneumatics()
 
-        # if self.isInRange():
-        #     self.next_state("grab")
+        if self.isInRange():
+            self.next_state("grab")
 
     @timed_state(duration=1, must_finish=True, next_state="retrieve")
     def grab(self, initial_call):
@@ -241,25 +255,36 @@ class ShooterControl(StateMachine):
             # extend arms and grab ball
             self.intake.extendGrabber()
 
-    @timed_state(duration=5, must_finish=True, next_state="hold")
+    @timed_state(duration=2, must_finish=True, next_state="holdBall")
     def retrieve(self, initial_call):
         # pull ball in while dropping launch
         if initial_call:
             self.intake.retractGrabber()
             self.shooter.dropLaunch()
 
-    @state()
-    def hold(self):
-        # clamp onto ball
-        self.intake.activateHold()
+    @timed_state(duration=2, must_finish=True, next_state="waitForFlywheel")
+    def holdBall(self, initial_call):
+        if initial_call:
+            # clamp onto ball
+            self.intake.activateHold()
 
-    @timed_state(duration=2, must_finish=True, next_state="release")
+    @state(must_finish=True)
+    def waitForFlywheel(self):
+        self.shooter.setFlywheelSpeeds(self.flywheel_speed)
+        if self.shooter.isReady():
+            self.next_state("waitToFire")
+    
+    @timed_state(duration=1, must_finish=True, next_state="fire")
+    def waitToFire(self):
+        pass
+
+    @timed_state(duration=1, must_finish=True, next_state="release")
     def fire(self, initial_call):
         if initial_call:
             # raise launch, grab resets
             self.shooter.raiseLaunch()
 
-    @state()
+    @state(must_finish=True)
     def release(self):
         self.reset_pneumatics()
 
@@ -271,3 +296,4 @@ class ShooterControl(StateMachine):
         self.intake.deactivateHold()
         self.shooter.raiseLaunch()
         self.intake.deactivateRetrieve()
+        self.shooter.setFlywheelSpeeds(0)

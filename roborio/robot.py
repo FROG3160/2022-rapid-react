@@ -205,12 +205,18 @@ class FROGbot(magicbot.MagicRobot):
         #     self.shooter.lowerFlywheel.decrementSpeed()
 
         if self.gunnerControl.getRightTriggerAxis() > 0.5:
-            self.firecontrol.next_state("fire")
+            self.firecontrol.next_state("waitToFire")
             self.firecontrol.engage()
 
         if self.gunnerControl.getRightBumperPressed():
             self.firecontrol.next_state("grab")
             self.firecontrol.engage()
+
+        if self.gunnerControl.getLeftBumperPressed():
+            if self.firecontrol.is_executing:
+                self.firecontrol.done()
+            else:
+                self.firecontrol.engage()
 
         # if self.gunnerControl.getRightBumperReleased():
         #     self.firecontrol.next_state("retrieve")
