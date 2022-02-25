@@ -274,6 +274,7 @@ class FROGbot(magicbot.MagicRobot):
 
         if self.driveStick.getTrigger():
             self.gyro.resetGyro()
+            self.swerveChassis.resetRemoteEncoders()
             self.swerveChassis.field_oriented_drive(0, 0, 0)
 
     def testInit(self):

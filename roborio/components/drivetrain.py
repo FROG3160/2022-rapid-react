@@ -234,6 +234,9 @@ class SwerveModule:
     def getSteerPosition(self):
         return self.steer.getSelectedSensorPosition(0)
 
+    def resetRemoteEncoder(self):
+        self.encoder.setPositionToAbsolute()
+
     def setup(self):
         # magicbot calls setup() when creating components
         # configure motors and other objects here.
@@ -252,7 +255,7 @@ class SwerveModule:
             SensorInitializationStrategy.BootToAbsolutePosition
         )
         # set position to Absolute
-        self.encoder.setPositionToAbsolute()
+        self.resetRemoteEncoder()
 
         self.steer.configAllSettings(cfgSteerMotor)
         # define the remote CANCoder as Remote Feedback 0
@@ -374,6 +377,10 @@ class SwerveChassis:
     @feedback
     def getCurrentRotationDPS(self):
         return self.current_speeds.omega_dps
+
+    def resetRemoteEncoders(self):
+        for module in self.modules:
+            module.resetRemoteEncoder()
 
 
     def setCurrentSpeeds(self):
