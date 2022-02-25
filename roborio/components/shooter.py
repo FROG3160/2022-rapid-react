@@ -22,7 +22,7 @@ FLYWHEEL_MAX_VEL = 22000  # Falcon ()
 FLYWHEEL_MAX_ACCEL = FLYWHEEL_MAX_VEL / 50
 FLYWHEEL_MAX_DECEL = -FLYWHEEL_MAX_ACCEL
 FLYWHEEL_INCREMENT = 100
-FLYWHEEL_VEL_TOLERANCE = 500
+FLYWHEEL_VEL_TOLERANCE = 100
 FLYWHEEL_LOOP_RAMP = 0.25
 
 ULTRASONIC_DISTANCE_INCHES = 8.67
@@ -238,6 +238,7 @@ class ShooterControl(StateMachine):
 
     flywheel_speed = tunable(10000)
 
+
     # def __init__(self):
     #     self.state = 'Empty'
 
@@ -255,14 +256,14 @@ class ShooterControl(StateMachine):
             # extend arms and grab ball
             self.intake.extendGrabber()
 
-    @timed_state(duration=2, must_finish=True, next_state="holdBall")
+    @timed_state(duration=1, must_finish=True, next_state="holdBall")
     def retrieve(self, initial_call):
         # pull ball in while dropping launch
         if initial_call:
             self.intake.retractGrabber()
             self.shooter.dropLaunch()
 
-    @timed_state(duration=2, must_finish=True, next_state="waitForFlywheel")
+    @timed_state(duration=1, must_finish=True, next_state="waitForFlywheel")
     def holdBall(self, initial_call):
         if initial_call:
             # clamp onto ball
