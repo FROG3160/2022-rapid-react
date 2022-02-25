@@ -61,6 +61,5 @@ class trajectoryController:
 
         sample = self.trajectoryGenerator.sample(self.Timer.get())
         adjustedSpeeds = self.swerveController.calculate(self.swerveChassis.odometry.getPose(), sample, geometry.Rotation2d.fromDegrees(0))
-        # Adjusted ChassisSpeeds to the Swerve Chassis
         self.swerveChassis.setChassisSpeeds(adjustedSpeeds)
         
