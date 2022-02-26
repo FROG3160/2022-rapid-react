@@ -4,6 +4,7 @@
 # Cargo cam resolution is 320x240. Goal cam is resolution is 640x480.
 
 import photonvision
+from photonvision import PhotonUtils
 from components.common import Buffer
 from wpilib import DriverStation
 from magicbot import feedback, tunable
@@ -13,11 +14,17 @@ from wpimath.filter import MedianFilter
 # LifeCam FOV is H62.8 x V37.9. Yaw is -31.4 to 31.4 degrees.
 #   Pitch is -18.9 to 18.9 degrees.
 # PiCam horizontal FOV is 53.5. Yaw is -26.75 to 26.75 degrees.
-LC_X_div = 31.4
-LC_Y_div = 18.9
-PI_X_div = 26.7
+LC_X_div = 62.8 / 2
+LC_Y_div = 37.9 / 2
+PI_X_div = 53.5 / 2
+PI_Y_div = 41.41 / 2
 
 FILTER_RESET_COUNT = 5
+FILTER_SIZE = 12  # 12 samples at 20 ms each sample = 240ms of samples
+
+TARGET_HEIGHT_METERS = 2.6416  # 8ft. 8in.  #TODO: Confirm this value
+CAMERA_HEIGHT_METERS = 0.508  # 20 inches   # TODO: Get the actual value
+CAMERA_PITCH_RADIANS = 0.5235988  # 30 deg.  # TODO: Get the actual value
 
 kRed = DriverStation.Alliance.kRed  # 0
 kBlue = DriverStation.Alliance.kBlue  # 1
@@ -44,12 +51,10 @@ class FROGVision:
 
         self.deactivateDriverMode()
 
-        self.CargoXFilter = MedianFilter(
-            5
-        )  # 5 samples at 20 ms each sample = 100ms of samples
-        self.GoalXFilter = MedianFilter(5)
-        self.CargoYFilter = MedianFilter(5)
-        self.GoalYFilter = MedianFilter(5)
+        self.CargoXFilter = MedianFilter(FILTER_SIZE)
+        self.GoalXFilter = MedianFilter(FILTER_SIZE)
+        self.CargoYFilter = MedianFilter(FILTER_SIZE)
+        self.GoalYFilter = MedianFilter(FILTER_SIZE)
 
         self.hasGoalTargets = False
         self.hasCargoTargets = False
@@ -57,9 +62,9 @@ class FROGVision:
         self.filterCargoResetCount = 0
 
         self.filteredCargoYaw = None
-        self.filteredCargoY = None
+        self.filteredCargoPitch = None
         self.filteredGoalYaw = None
-        self.filteredGoalY = None
+        self.filteredGoalPitch = None
 
     def activateDriverMode(self):
         self.CARGOcam.setDriverMode(True)
@@ -90,7 +95,7 @@ class FROGVision:
 
     @feedback()
     def getFilteredCargoPitch(self):
-        return self.filteredCargoY
+        return self.filteredCargoPitch
 
     @feedback()
     def get_FilteredGoalYaw(self):
@@ -98,7 +103,17 @@ class FROGVision:
 
     @feedback()
     def getFilteredGoalPitch(self):
-        return self.filteredGoalY
+        return self.filteredGoalPitch
+
+    @feedback()
+    def getRangeInches(self):
+        if self.filteredGoalPitch:
+            return (PhotonUtils.calculateDistanceToTarget(
+                CAMERA_HEIGHT_METERS,
+                TARGET_HEIGHT_METERS,
+                CAMERA_PITCH_RADIANS,
+                self.filteredGoalPitch,
+            ) * 5000) / 127
 
     def getGoalX(self):
         if target := self.GoalTarget.getYaw():
@@ -126,13 +141,13 @@ class FROGVision:
         self.CargoXFilter.reset()
         self.CargoYFilter.reset()
         self.filteredCargoYaw = None
-        self.filteredCargoY = None
+        self.filteredCargoPitch = None
 
     def resetGoalFilters(self):
         self.GoalXFilter.reset()
         self.GoalYFilter.reset()
         self.filteredGoalYaw = None
-        self.filteredGoalY = None
+        self.filteredGoalPitch = None
 
     def setCargoAllianceColor(self):
         self.CARGOcam.setPipelineIndex(self.allianceColor + 1)
@@ -151,7 +166,7 @@ class FROGVision:
         self.filteredCargoYaw = self.CargoXFilter.calculate(
             self.CargoTarget.getYaw()
         )
-        self.filteredCargoY = self.CargoYFilter.calculate(
+        self.filteredCargoPitch = self.CargoYFilter.calculate(
             self.CargoTarget.getPitch()
         )
 
@@ -160,10 +175,10 @@ class FROGVision:
         self.filteredGoalYaw = self.GoalXFilter.calculate(
             self.GoalTarget.getYaw()
         )
-        self.filteredGoalY = self.GoalYFilter.calculate(
+        self.filteredGoalPitch = self.GoalYFilter.calculate(
             self.GoalTarget.getPitch()
         )
-        print("Filtered: ", self.filteredGoalYaw, self.filteredGoalY)
+        print("Filtered: ", self.filteredGoalYaw, self.filteredGoalPitch)
 
     def execute(self):
         # Grabs the latest results from the Cameras and then get the
@@ -190,8 +205,6 @@ class FROGVision:
             self.hasGoalTargets = True
             self.GoalTarget = self.GoalResults.getBestTarget()
             self.GoalYawBuff.append(self.GoalTarget.getYaw())
-            
-            print("We have a target: ", self.GoalTarget)
             self.updateGoalFilters()
         else:
             self.hasGoalTargets = False
