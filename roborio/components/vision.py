@@ -23,8 +23,8 @@ FILTER_RESET_COUNT = 5
 FILTER_SIZE = 12  # 12 samples at 20 ms each sample = 240ms of samples
 
 TARGET_HEIGHT_METERS = 2.6416  # 8ft. 8in.  #TODO: Confirm this value
-CAMERA_HEIGHT_METERS = 0.508  # 20 inches   # TODO: Get the actual value
-CAMERA_PITCH_RADIANS = 0.5235988  # 30 deg.  # TODO: Get the actual value
+CAMERA_HEIGHT_METERS = 0.46482  # 18.3 inches
+CAMERA_PITCH_RADIANS = 0.4658284  # 26.69 degrees
 
 kRed = DriverStation.Alliance.kRed  # 0
 kBlue = DriverStation.Alliance.kBlue  # 1
