@@ -46,6 +46,8 @@ class FROGbot(magicbot.MagicRobot):
     Initialize components here.
     """
 
+    firecontrol: ShooterControl
+    
     gyro: FROGGyro
     lidar: FROGdar
     vision: FROGVision
@@ -53,8 +55,6 @@ class FROGbot(magicbot.MagicRobot):
     shooter: FROGShooter
     intake: Intake
     sonic: FROGsonic
-
-    firecontrol: ShooterControl
 
     swerveFrontLeft: SwerveModule
     swerveFrontRight: SwerveModule
@@ -108,8 +108,8 @@ class FROGbot(magicbot.MagicRobot):
             -trackwidth / 2,
         )
 
-        self.swerveFrontLeft_steerOffset = 18.5449219 #13.008
-        self.swerveFrontRight_steerOffset = 174.023438 #171.914
+        self.swerveFrontLeft_steerOffset = 21.796875 #18.5449219 #13.008
+        self.swerveFrontRight_steerOffset = 177.1875 #174.023438 #171.914
         self.swerveBackLeft_steerOffset = 23.0273438 #22.764
         self.swerveBackRight_steerOffset = -43.41797 #-43.242
 
@@ -158,9 +158,17 @@ class FROGbot(magicbot.MagicRobot):
     def getAutoTargeting(self):
         return self.autoTargeting
 
+    @feedback(key='Auto Intake')
+    def getAutoIntake(self):
+        return self.firecontrol.autoIntake
+
+    @feedback(key='Auto Fire')
+    def getAutoFire(self):
+        return self.firecontrol.autoFire
+
     @feedback(key="Object Targeted")
     def getObjectTargeted(self):
-        return ["Cargo", "Goal"][self.objectTargeted]
+        return ["CARGO", "GOAL"][self.objectTargeted]
 
     @feedback(key="TargetX")
     def getTarget(self):
@@ -204,19 +212,27 @@ class FROGbot(magicbot.MagicRobot):
         # if self.gunnerControl.getXButtonReleased():
         #     self.shooter.lowerFlywheel.decrementSpeed()
 
-        if self.gunnerControl.getRightTriggerAxis() > 0.5:
-            self.firecontrol.next_state("waitToFire")
-            self.firecontrol.engage()
+        if self.gunnerControl.getLeftBumperPressed():
+            #toggle autoIntake between true and false
+            #if False, autoIntake is set to True, etc.
+            self.firecontrol.autoIntake = [True, False][self.firecontrol.autoIntake]
 
         if self.gunnerControl.getRightBumperPressed():
-            self.firecontrol.next_state("grab")
+            self.firecontrol.autoFire = [True, False][self.firecontrol.autoFire]
+
+        if self.gunnerControl.getLeftTriggerAxis() > 0.5 and not self.firecontrol.autoIntake:
+            if not self.firecontrol.is_executing:
+                self.firecontrol.next_state('waitForBall')
+            self.firecontrol.engage()
+        
+        if self.gunnerControl.getRightTriggerAxis() > 0.5 and not self.firecontrol.autoFire:
+            if not self.firecontrol.is_executing:
+                self.firecontrol.next_state("waitForFlywheel")
             self.firecontrol.engage()
 
-        if self.gunnerControl.getLeftBumperPressed():
-            if self.firecontrol.is_executing:
-                self.firecontrol.done()
-            else:
-                self.firecontrol.engage()
+        if self.firecontrol.autoIntake or self.firecontrol.autoFire:
+            self.firecontrol.engage()
+
 
         # if self.gunnerControl.getRightBumperReleased():
         #     self.firecontrol.next_state("retrieve")
@@ -247,6 +263,8 @@ class FROGbot(magicbot.MagicRobot):
         else:
             self.overrideTargeting = False
 
+
+
         self.xOrig = joystickAxisDeadband(self.driveStick.getFieldForward())
         self.yOrig = joystickAxisDeadband(self.driveStick.getFieldLeft())
 
@@ -272,7 +290,7 @@ class FROGbot(magicbot.MagicRobot):
         if vX or vY or vT:
             self.swerveChassis.field_oriented_drive(vX, vY, vT)
 
-        if self.driveStick.getTrigger():
+        if self.driveStick.getRawButtonPressed(3):
             self.gyro.resetGyro()
             self.swerveChassis.resetRemoteEncoders()
             self.swerveChassis.field_oriented_drive(0, 0, 0)

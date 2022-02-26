@@ -235,12 +235,13 @@ class ShooterControl(StateMachine):
     shooter: FROGShooter
     sonic: FROGsonic
     vision: FROGVision
+    #
 
     flywheel_speed = tunable(10000)
 
-
-    # def __init__(self):
-    #     self.state = 'Empty'
+    def __init__(self):
+        self.autoIntake = False
+        self.autoFire = False
 
     @state(first=True, must_finish=True)
     def waitForBall(self, initial_call):
@@ -263,12 +264,14 @@ class ShooterControl(StateMachine):
             self.intake.retractGrabber()
             self.shooter.dropLaunch()
 
-    @timed_state(duration=1, must_finish=True, next_state="waitForFlywheel")
+    @timed_state(duration=1, must_finish=True)
     def holdBall(self, initial_call):
         if initial_call:
             # clamp onto ball
             self.intake.activateHold()
-
+        if self.autoFire:
+            self.next_state('waitForFlywheel')
+            
     @state(must_finish=True)
     def waitForFlywheel(self):
         self.shooter.setFlywheelSpeeds(self.flywheel_speed)
@@ -282,12 +285,14 @@ class ShooterControl(StateMachine):
     @timed_state(duration=1, must_finish=True, next_state="release")
     def fire(self, initial_call):
         if initial_call:
-            # raise launch, grab resets
+            # raise launch, self.intake.grab resets
             self.shooter.raiseLaunch()
 
     @state(must_finish=True)
     def release(self):
         self.reset_pneumatics()
+        if self.autoIntake:
+            self.next_state('waitForBall')
 
     @feedback()
     def isInRange(self):
