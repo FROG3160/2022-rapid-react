@@ -82,7 +82,7 @@ cfgDriveMotor.primaryPID = BaseTalonPIDSetConfiguration(
 cfgDriveMotor.slot0.kP = 0.0
 cfgDriveMotor.slot0.kI = 0.0
 cfgDriveMotor.slot0.kD = 0.0
-cfgDriveMotor.slot0.kF = 0.04664 #$0.058
+cfgDriveMotor.slot0.kF = 0.04664  # $0.058
 
 
 def optimize_steer_angle(new_state: SwerveModuleState, current_radians):
@@ -157,7 +157,7 @@ class SwerveModule:
             kFalconTicksPerRotation,
         )
         self.calculated_velocity = 0
-        
+
     def disable(self):
         self.enabled = False
 
@@ -169,7 +169,7 @@ class SwerveModule:
     def getEncoderPostion(self):
         return self.encoder.getPosition()
 
-    @feedback(key='EncoderAbsolutePosition')
+    @feedback(key="EncoderAbsolutePosition")
     def getEncoderAbsolutePosition(self) -> float:
         """gets the absolute position from the CANCoder
 
@@ -178,7 +178,7 @@ class SwerveModule:
         """
         return self.encoder.getAbsolutePosition()
 
-    #@feedback()
+    # @feedback()
     # ! Not used
     def getStateFPS(self):
         return self.state.speed_fps
@@ -192,11 +192,11 @@ class SwerveModule:
     # to read.  Right now they are inverted
     # to visually show positive angles to the
     # right (clockwise) to match the smartdashboard
-    #@feedback()
+    # @feedback()
     def getCommandedDegrees(self):
         return -self.state.angle.degrees()
 
-    #@feedback()
+    # @feedback()
     # ! Not used
     def getCommandedTicks(self):
         return kCANCoderTicksPerDegree * self.state.angle.degrees()
@@ -230,7 +230,7 @@ class SwerveModule:
             self.getCurrentRotation(),
         )
 
-    #@feedback()
+    # @feedback()
     def getSteerPosition(self):
         return self.steer.getSelectedSensorPosition(0)
 
@@ -304,12 +304,9 @@ class SwerveModule:
             )
             # set velocity for Falcon to ticks/100ms
             self.calculated_velocity = self.drive_unit.speedToVelocity(
-                    self.state.speed * speed_inversion
-                )
-            self.drive.set(
-                VELOCITY_MODE,
-                self.calculated_velocity
+                self.state.speed * speed_inversion
             )
+            self.drive.set(VELOCITY_MODE, self.calculated_velocity)
         else:
             self.drive.set(0)
 
@@ -330,7 +327,7 @@ class SwerveChassis:
             SwerveModuleState(),
             SwerveModuleState(),
             SwerveModuleState(),
-            SwerveModuleState()
+            SwerveModuleState(),
         )
         self.current_speeds = ChassisSpeeds(0, 0, 0)
 
@@ -382,9 +379,10 @@ class SwerveChassis:
         for module in self.modules:
             module.resetRemoteEncoder()
 
-
     def setCurrentSpeeds(self):
-        self.current_speeds = self.kinematics.toChassisSpeeds(self.current_states)
+        self.current_speeds = self.kinematics.toChassisSpeeds(
+            self.current_states
+        )
 
     def setup(self):
         # magicbot calls setup() when creating components

@@ -5,7 +5,7 @@ from ctre import CANifier
 import wpilib
 from .common import Buffer
 from rev import ColorSensorV3
-import math 
+import math
 
 BUFFERLEN = 50
 
@@ -18,9 +18,9 @@ class FROGGyro:
     def __init__(self):
         # TODO Make sure if we need this.
         self.gyro = AHRS.create_spi()
-        #self.field_heading = 360-242
+        # self.field_heading = 360-242
         self.gyro.reset()
-        #self.gyro.setAngleAdjustment(-self.field_heading)
+        # self.gyro.setAngleAdjustment(-self.field_heading)
 
     @feedback(key="heading")
     def getHeading(self):
@@ -33,7 +33,7 @@ class FROGGyro:
 
     def execute(self):
         pass
-    
+
     @feedback()
     def getAngle(self):
         return self.gyro.getAngle()
@@ -71,10 +71,7 @@ class FROGdar:
         self.enabled = True
 
     def isValidData(self):
-        return (
-            self.rangeBuffer._isValidData()
-            and self.targetRange is not None
-        )
+        return self.rangeBuffer._isValidData() and self.targetRange is not None
 
     @feedback(key="sensor_raw")
     def getSensorData(self):
@@ -102,10 +99,6 @@ class FROGdar:
         if self.isValidData():
             return self.getBufferedSensorData() * SENSORUNITS_IN_METERS
 
-
-
-        
-    
     def execute(self):
         if self.enabled:
             # stream data into our counter
@@ -118,9 +111,8 @@ class FROGdar:
             self.rangeBuffer.clear()
             self.targetRange = None
 
-            
-class FROGColor:
 
+class FROGColor:
     def __init__(self):
         self.enabled = False
         self.colorSensor = ColorSensorV3(wpilib.I2C.Port.kOnboard)
@@ -131,15 +123,15 @@ class FROGColor:
     def disable(self):
         self.enabled = False
 
-    @feedback(key='Red')
+    @feedback(key="Red")
     def getRed(self):
         return self.colorSensor.getColor().red
 
-    @feedback(key='Blue')
+    @feedback(key="Blue")
     def getBlue(self):
         return self.colorSensor.getColor().blue
 
-    @feedback(key='Proximity')
+    @feedback(key="Proximity")
     def getProximity(self):
         return self.colorSensor.getProximity()
 
@@ -164,4 +156,4 @@ class FROGsonic:
     @feedback()
     def getInches(self):
         self.USVolt = self.cargoUltrasonic.getVoltage()
-        return (self.USVolt * self.mm / (self.mv/1000)) * 0.039
+        return (self.USVolt * self.mm / (self.mv / 1000)) * 0.039

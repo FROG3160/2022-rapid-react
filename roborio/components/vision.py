@@ -109,12 +109,15 @@ class FROGVision:
     @feedback()
     def getRangeInches(self):
         if self.filteredGoalPitch:
-            return (PhotonUtils.calculateDistanceToTarget(
-                CAMERA_HEIGHT_METERS,
-                TARGET_HEIGHT_METERS,
-                CAMERA_PITCH_RADIANS,
-                self.filteredGoalPitch,
-            ) * 5000) / 127
+            return (
+                PhotonUtils.calculateDistanceToTarget(
+                    CAMERA_HEIGHT_METERS,
+                    TARGET_HEIGHT_METERS,
+                    CAMERA_PITCH_RADIANS,
+                    self.filteredGoalPitch,
+                )
+                * 5000
+            ) / 127
 
     def getGoalX(self):
         if target := self.GoalTarget.getYaw():

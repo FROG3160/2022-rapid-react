@@ -47,7 +47,7 @@ class FROGbot(magicbot.MagicRobot):
     """
 
     firecontrol: ShooterControl
-    
+
     gyro: FROGGyro
     lidar: FROGdar
     color: FROGColor
@@ -109,10 +109,10 @@ class FROGbot(magicbot.MagicRobot):
             -trackwidth / 2,
         )
 
-        self.swerveFrontLeft_steerOffset = 21.796875 #18.5449219 #13.008
-        self.swerveFrontRight_steerOffset = 177.1875 #174.023438 #171.914
-        self.swerveBackLeft_steerOffset = 23.0273438 #22.764
-        self.swerveBackRight_steerOffset = -43.41797 #-43.242
+        self.swerveFrontLeft_steerOffset = 21.796875  # 18.5449219 #13.008
+        self.swerveFrontRight_steerOffset = 177.1875  # 174.023438 #171.914
+        self.swerveBackLeft_steerOffset = 23.0273438  # 22.764
+        self.swerveBackRight_steerOffset = -43.41797  # -43.242
 
         # flywheel motors
         self.lowerFlywheel_motor = WPI_TalonFX(41)
@@ -127,7 +127,7 @@ class FROGbot(magicbot.MagicRobot):
         self.sonic_mv = 9.8
 
         # PCM
-        #self.pcm = PneumaticsControlModule()
+        # self.pcm = PneumaticsControlModule()
         # Solenoids for shooter
         self.intake_retrieve = Solenoid(CTRE_PCM, 2)
         self.intake_hold = Solenoid(CTRE_PCM, 1)
@@ -159,11 +159,11 @@ class FROGbot(magicbot.MagicRobot):
     def getAutoTargeting(self):
         return self.autoTargeting
 
-    @feedback(key='Auto Intake')
+    @feedback(key="Auto Intake")
     def getAutoIntake(self):
         return self.firecontrol.autoIntake
 
-    @feedback(key='Auto Fire')
+    @feedback(key="Auto Fire")
     def getAutoFire(self):
         return self.firecontrol.autoFire
 
@@ -189,7 +189,7 @@ class FROGbot(magicbot.MagicRobot):
         """Called when teleop starts; optional"""
         self.swerveChassis.enable()
         self.autoTargeting = False
-        #self.firecontrol.engage()
+        # self.firecontrol.engage()
 
     def getRotationPID(self, target):
         self.rotationController.setP(self.rotationP)
@@ -214,26 +214,33 @@ class FROGbot(magicbot.MagicRobot):
         #     self.shooter.lowerFlywheel.decrementSpeed()
 
         if self.gunnerControl.getLeftBumperPressed():
-            #toggle autoIntake between true and false
-            #if False, autoIntake is set to True, etc.
-            self.firecontrol.autoIntake = [True, False][self.firecontrol.autoIntake]
+            # toggle autoIntake between true and false
+            # if False, autoIntake is set to True, etc.
+            self.firecontrol.autoIntake = [True, False][
+                self.firecontrol.autoIntake
+            ]
 
         if self.gunnerControl.getRightBumperPressed():
             self.firecontrol.autoFire = [True, False][self.firecontrol.autoFire]
 
-        if self.gunnerControl.getLeftTriggerAxis() > 0.5 and not self.firecontrol.autoIntake:
+        if (
+            self.gunnerControl.getLeftTriggerAxis() > 0.5
+            and not self.firecontrol.autoIntake
+        ):
             if not self.firecontrol.is_executing:
-                self.firecontrol.next_state('waitForBall')
+                self.firecontrol.next_state("waitForBall")
             self.firecontrol.engage()
-        
-        if self.gunnerControl.getRightTriggerAxis() > 0.5 and not self.firecontrol.autoFire:
+
+        if (
+            self.gunnerControl.getRightTriggerAxis() > 0.5
+            and not self.firecontrol.autoFire
+        ):
             if not self.firecontrol.is_executing:
                 self.firecontrol.next_state("waitForFlywheel")
             self.firecontrol.engage()
 
         if self.firecontrol.autoIntake or self.firecontrol.autoFire:
             self.firecontrol.engage()
-
 
         # if self.gunnerControl.getRightBumperReleased():
         #     self.firecontrol.next_state("retrieve")
@@ -263,8 +270,6 @@ class FROGbot(magicbot.MagicRobot):
             self.overrideTargeting = True
         else:
             self.overrideTargeting = False
-
-
 
         self.xOrig = joystickAxisDeadband(self.driveStick.getFieldForward())
         self.yOrig = joystickAxisDeadband(self.driveStick.getFieldLeft())
