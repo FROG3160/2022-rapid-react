@@ -247,6 +247,7 @@ class ShooterControl(StateMachine):
     def __init__(self):
         self.autoIntake = False
         self.autoFire = False
+        self.ballColor = None
 
     @state(first=True, must_finish=True)
     def waitForBall(self, initial_call):
@@ -268,6 +269,14 @@ class ShooterControl(StateMachine):
         if initial_call:
             self.intake.retractGrabber()
             self.shooter.dropLaunch()
+
+    @state()
+    def checkBallColor(self):
+        self.ballColor = self.getBallInPosition()
+        if self.ballColor:
+            self.next_state('holdBall')
+        else:
+            self.next_state('release')
 
     @timed_state(duration=1, must_finish=True)
     def holdBall(self, initial_call):
@@ -305,11 +314,13 @@ class ShooterControl(StateMachine):
 
     @feedback()
     def getBallColor(self):
-        return self.color.getRed() < self.color.getBlue()
+        #only return a color if we 
+        if self.getBallInPosition():
+            return self.color.getRed() < self.color.getBlue()
 
     @feedback()
-    def getBallInPlace(self):
-        return self.color.getProximity() > PROXIMITY_THRESHOLD
+    def getBallInPosition(self):
+        return self.color.getProximity() > PROXIMITY_THRESHOLD:
 
     def reset_pneumatics(self):
         self.intake.deactivateHold()
