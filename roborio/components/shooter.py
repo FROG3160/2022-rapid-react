@@ -14,7 +14,6 @@ from components.vision import FROGVision
 from magicbot import tunable
 
 
-
 # TODO Find out the Min/Max of the velocity and the tolerence for the Flywheel
 FLYWHEEL_MODE = ControlMode.Velocity
 FLYWHEEL_PID = TalonPID(0, p=0, f=0.0475)
@@ -26,11 +25,13 @@ FLYWHEEL_INCREMENT = 100
 FLYWHEEL_VEL_TOLERANCE = 100
 FLYWHEEL_LOOP_RAMP = 0.25
 
-ULTRASONIC_DISTANCE_INCHES = 9.5 #8.65
+ULTRASONIC_DISTANCE_INCHES = 9.5  # 8.65
 PROXIMITY_THRESHOLD = 1375
+TARGET_TOLERANCE = 0.1
 
-RED = DriverStation.Alliance.kRed # 0
-BLUE = DriverStation.Alliance.kBlue # 1
+RED = DriverStation.Alliance.kRed  # 0
+BLUE = DriverStation.Alliance.kBlue  # 1
+
 
 class Flywheel:
     motor: WPI_TalonFX
@@ -249,7 +250,7 @@ class ShooterControl(StateMachine):
         self.autoFire = False
         self.ballColor = None
 
-    @state(first=True, must_finish=True)
+    @state(first=True)
     def waitForBall(self, initial_call):
         if initial_call:
             self.reset_pneumatics()
@@ -257,13 +258,13 @@ class ShooterControl(StateMachine):
         if self.isInRange():
             self.next_state("grab")
 
-    @timed_state(duration=1, must_finish=True, next_state="retrieve")
+    @timed_state(duration=1, next_state="retrieve")
     def grab(self, initial_call):
         if initial_call:
             # extend arms and grab ball
             self.intake.extendGrabber()
 
-    @timed_state(duration=1, must_finish=True, next_state="holdBall")
+    @timed_state(duration=1, next_state="checkBallColor")
     def retrieve(self, initial_call):
         # pull ball in while dropping launch
         if initial_call:
@@ -274,27 +275,35 @@ class ShooterControl(StateMachine):
     def checkBallColor(self):
         self.ballColor = self.getBallInPosition()
         if self.ballColor:
-            self.next_state('holdBall')
+            self.next_state("holdBall")
         else:
-            self.next_state('release')
+            self.next_state("release")
 
-    @timed_state(duration=1, must_finish=True)
+    @timed_state(duration=1)
     def holdBall(self, initial_call):
         if initial_call:
             # clamp onto ball
             self.intake.activateHold()
         if self.autoFire:
-            self.next_state('waitForFlywheel')
-            
-    @state(must_finish=True)
+            self.next_state("waitForGoal")
+
+    @state()
+    def waitForGoal(self):
+        if self.vision.hasGoalTargets:
+            self.next_state("waitForFlywheel")
+
+    @state()
     def waitForFlywheel(self):
-        self.shooter.setFlywheelSpeeds(self.flywheel_speed)
-        if self.shooter.isReady():
-            self.next_state("waitToFire")
-    
-    @timed_state(duration=1, must_finish=True, next_state="fire")
-    def waitToFire(self):
-        pass
+        self.shooter.setFlywheelSpeeds(self.calculateFlywheelSpeed())
+        if (
+            self.shooter.isReady()
+            and abs(self.vision.getFilteredGoalYaw()) < TARGET_TOLERANCE
+        ):
+            self.next_state("fire")
+
+    # @timed_state(duration=1, must_finish=True, next_state="fire")
+    # def waitToFire(self):
+    #     pass
 
     @timed_state(duration=1, must_finish=True, next_state="release")
     def fire(self, initial_call):
@@ -306,7 +315,7 @@ class ShooterControl(StateMachine):
     def release(self):
         self.reset_pneumatics()
         if self.autoIntake:
-            self.next_state('waitForBall')
+            self.next_state("waitForBall")
 
     @feedback()
     def isInRange(self):
@@ -314,13 +323,16 @@ class ShooterControl(StateMachine):
 
     @feedback()
     def getBallColor(self):
-        #only return a color if we 
+        # only return a color if we
         if self.getBallInPosition():
             return self.color.getRed() < self.color.getBlue()
 
     @feedback()
     def getBallInPosition(self):
-        return self.color.getProximity() > PROXIMITY_THRESHOLD:
+        return self.color.getProximity() > PROXIMITY_THRESHOLD
+
+    def calculateFlywheelSpeed(self):
+        return 8000 + self.vision.getRangeInches()
 
     def reset_pneumatics(self):
         self.intake.deactivateHold()

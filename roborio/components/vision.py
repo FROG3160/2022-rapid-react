@@ -9,6 +9,7 @@ from components.common import Buffer
 from wpilib import DriverStation
 from magicbot import feedback, tunable
 from wpimath.filter import MedianFilter
+import math
 
 # Values by which the the results are divided to give an output of -1 to 1.
 # LifeCam FOV is H62.8 x V37.9. Yaw is -31.4 to 31.4 degrees.
@@ -22,9 +23,9 @@ PI_Y_div = 41.41 / 2
 FILTER_RESET_COUNT = 5
 FILTER_SIZE = 12  # 12 samples at 20 ms each sample = 240ms of samples
 
-TARGET_HEIGHT_METERS = 2.6416  # 8ft. 8in.  #TODO: Confirm this value
-CAMERA_HEIGHT_METERS = 0.46482  # 18.3 inches
-CAMERA_PITCH_RADIANS = 0.4658284  # 26.69 degrees
+TARGET_HEIGHT_METERS = 102.5 * 0.0254  # 8ft. 8in.  #TODO: Confirm this value
+CAMERA_HEIGHT_METERS = 18.3 * 0.0254  # to meters
+CAMERA_PITCH_RADIANS = math.radians(26.69)  # 26.69 degrees
 
 kRed = DriverStation.Alliance.kRed  # 0
 kBlue = DriverStation.Alliance.kBlue  # 1
@@ -98,7 +99,7 @@ class FROGVision:
         return self.filteredCargoPitch
 
     @feedback()
-    def get_FilteredGoalYaw(self):
+    def getFilteredGoalYaw(self):
         return self.filteredGoalYaw
 
     @feedback()
@@ -171,14 +172,12 @@ class FROGVision:
         )
 
     def updateGoalFilters(self):
-        print("set X filter: ", self.GoalTarget.getYaw())
         self.filteredGoalYaw = self.GoalXFilter.calculate(
             self.GoalTarget.getYaw()
         )
         self.filteredGoalPitch = self.GoalYFilter.calculate(
             self.GoalTarget.getPitch()
         )
-        print("Filtered: ", self.filteredGoalYaw, self.filteredGoalPitch)
 
     def execute(self):
         # Grabs the latest results from the Cameras and then get the
