@@ -353,7 +353,7 @@ class SwerveChassis:
             vX * kMaxMetersPerSec,
             vY * kMaxMetersPerSec,
             vT * kMaxRadiansPerSec,
-            Rotation2d.fromDegrees(self.gyro.getAngle()),
+            Rotation2d.fromDegrees(-self.gyro.getAngle()),
         )
 
     def enable(self):
