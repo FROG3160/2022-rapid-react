@@ -19,7 +19,7 @@ from wpimath.controller import (
     ProfiledPIDControllerRadians,
 )
 from components.driverstation import FROGStick, FROGBoxGunner
-from components.sensors import FROGGyro, FROGdar, FROGsonic
+from components.sensors import FROGGyro, FROGdar, FROGsonic, FROGColor
 from components.shooter import FROGShooter, Flywheel, Intake
 from components.vision import FROGVision
 from components.common import Rescale
@@ -50,6 +50,7 @@ class FROGbot(magicbot.MagicRobot):
     
     gyro: FROGGyro
     lidar: FROGdar
+    color: FROGColor
     vision: FROGVision
     swerveChassis: SwerveChassis
     shooter: FROGShooter

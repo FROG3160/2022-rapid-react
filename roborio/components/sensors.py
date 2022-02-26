@@ -139,6 +139,10 @@ class FROGColor:
     def getBlue(self):
         return self.colorSensor.getColor().blue
 
+    @feedback(key='Proximity')
+    def getProximity(self):
+        return self.colorSensor.getProximity()
+
     def execute(self):
         pass
 

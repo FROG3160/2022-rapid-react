@@ -9,9 +9,10 @@ from ctre import (
 from magicbot import feedback, state, timed_state
 from magicbot.state_machine import StateMachine
 from components.common import TalonPID
-from components.sensors import FROGdar, FROGsonic
+from components.sensors import FROGdar, FROGsonic, FROGColor
 from components.vision import FROGVision
 from magicbot import tunable
+
 
 
 # TODO Find out the Min/Max of the velocity and the tolerence for the Flywheel
@@ -25,8 +26,11 @@ FLYWHEEL_INCREMENT = 100
 FLYWHEEL_VEL_TOLERANCE = 100
 FLYWHEEL_LOOP_RAMP = 0.25
 
-ULTRASONIC_DISTANCE_INCHES = 8.67
+ULTRASONIC_DISTANCE_INCHES = 9.5 #8.65
+PROXIMITY_THRESHOLD = 1375
 
+RED = DriverStation.Alliance.kRed # 0
+BLUE = DriverStation.Alliance.kBlue # 1
 
 class Flywheel:
     motor: WPI_TalonFX
@@ -235,6 +239,7 @@ class ShooterControl(StateMachine):
     shooter: FROGShooter
     sonic: FROGsonic
     vision: FROGVision
+    color: FROGColor
     #
 
     flywheel_speed = tunable(10000)
@@ -297,6 +302,14 @@ class ShooterControl(StateMachine):
     @feedback()
     def isInRange(self):
         return self.sonic.getInches() <= ULTRASONIC_DISTANCE_INCHES
+
+    @feedback()
+    def getBallColor(self):
+        return self.color.getRed() < self.color.getBlue()
+
+    @feedback()
+    def getBallInPlace(self):
+        return self.color.getProximity() > PROXIMITY_THRESHOLD
 
     def reset_pneumatics(self):
         self.intake.deactivateHold()
