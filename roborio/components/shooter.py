@@ -264,7 +264,7 @@ class ShooterControl(StateMachine):
             # extend arms and grab ball
             self.intake.extendGrabber()
 
-    @timed_state(duration=1, next_state="checkBallColor")
+    @timed_state(duration=2, next_state="checkBallColor")
     def retrieve(self, initial_call):
         # pull ball in while dropping launch
         if initial_call:
