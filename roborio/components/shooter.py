@@ -26,8 +26,8 @@ FLYWHEEL_VEL_TOLERANCE = 100
 FLYWHEEL_LOOP_RAMP = 0.25
 
 ULTRASONIC_DISTANCE_INCHES = 9.5  # 8.65
-PROXIMITY_THRESHOLD = 1375
-TARGET_TOLERANCE = 0.1
+PROXIMITY_THRESHOLD = 1000
+TARGET_TOLERANCE = 3.0
 
 RED = DriverStation.Alliance.kRed  # 0
 BLUE = DriverStation.Alliance.kBlue  # 1
@@ -249,6 +249,7 @@ class ShooterControl(StateMachine):
         self.autoIntake = False
         self.autoFire = False
         self.ballColor = None
+        self.fireCommanded = False
 
     @state(first=True)
     def waitForBall(self, initial_call):
@@ -264,7 +265,7 @@ class ShooterControl(StateMachine):
             # extend arms and grab ball
             self.intake.extendGrabber()
 
-    @timed_state(duration=2, next_state="checkBallColor")
+    @timed_state(duration=1, next_state="checkBallColor")
     def retrieve(self, initial_call):
         # pull ball in while dropping launch
         if initial_call:
@@ -273,13 +274,13 @@ class ShooterControl(StateMachine):
 
     @state()
     def checkBallColor(self):
-        self.ballColor = self.getBallInPosition()
-        if self.ballColor:
+        self.ballColor = self.getBallColor()
+        if self.ballColor is not None:
             self.next_state("holdBall")
         else:
             self.next_state("release")
 
-    @timed_state(duration=1)
+    @state()
     def holdBall(self, initial_call):
         if initial_call:
             # clamp onto ball
@@ -294,10 +295,13 @@ class ShooterControl(StateMachine):
 
     @state()
     def waitForFlywheel(self):
-        self.shooter.setFlywheelSpeeds(self.calculateFlywheelSpeed())
+
+        flyspeed = self.calculateFlywheelSpeed()
+        self.shooter.setFlywheelSpeeds(flyspeed)
         if (
-            self.shooter.isReady()
-            and abs(self.vision.getFilteredGoalYaw()) < TARGET_TOLERANCE
+            not flyspeed == 0
+            and self.shooter.isReady()
+            and self.isOnTarget()
         ):
             self.next_state("fire")
 
@@ -322,6 +326,10 @@ class ShooterControl(StateMachine):
         return self.sonic.getInches() <= ULTRASONIC_DISTANCE_INCHES
 
     @feedback()
+    def isOnTarget(self):
+        return abs(self.vision.getFilteredGoalYaw()) < TARGET_TOLERANCE
+
+    @feedback()
     def getBallColor(self):
         # only return a color if we
         if self.getBallInPosition():
@@ -332,10 +340,16 @@ class ShooterControl(StateMachine):
         return self.color.getProximity() > PROXIMITY_THRESHOLD
 
     def calculateFlywheelSpeed(self):
-        return 8000 + self.vision.getRangeInches()
+        if range := self.vision.getRangeInches():
+            return 8000 + range
+        else:
+            return 0
 
     def reset_pneumatics(self):
         self.intake.deactivateHold()
         self.shooter.raiseLaunch()
         self.intake.deactivateRetrieve()
         self.shooter.setFlywheelSpeeds(0)
+
+    def commandToFire(self, mode):
+        self.fireCommanded = mode
