@@ -23,7 +23,7 @@ PI_Y_div = 41.41 / 2
 FILTER_RESET_COUNT = 5
 FILTER_SIZE = 12  # 12 samples at 20 ms each sample = 240ms of samples
 
-TARGET_HEIGHT_METERS = 102.5 * 0.0254  # 8ft. 8in.  #TODO: Confirm this value
+TARGET_HEIGHT_METERS = 104 * 0.0254  # 8ft. 8in.  #TODO: Confirm this value
 CAMERA_HEIGHT_METERS = 18.3 * 0.0254  # to meters
 CAMERA_PITCH_RADIANS = math.radians(26.69)  # 26.69 degrees
 
@@ -114,7 +114,7 @@ class FROGVision:
                     CAMERA_HEIGHT_METERS,
                     TARGET_HEIGHT_METERS,
                     CAMERA_PITCH_RADIANS,
-                    self.filteredGoalPitch,
+                    math.radians(self.filteredGoalPitch),
                 )
                 * 5000
             ) / 127
