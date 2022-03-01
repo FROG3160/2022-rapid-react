@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 from ctre import WPI_CANCoder, WPI_TalonFX, CANifier
 import magicbot
-from magicbot import feedback
+from magicbot import feedback, tunable
 import wpilib
 import math
 from wpilib import (
@@ -21,7 +21,7 @@ from wpimath.controller import (
 from components.driverstation import FROGStick, FROGBoxGunner
 from components.sensors import FROGGyro, FROGdar, FROGsonic, FROGColor
 from components.shooter import FROGShooter, Flywheel, Intake
-from components.vision import FROGVision
+from components.vision import FROGVision, LC_Y_div
 from components.common import Rescale
 from components.shooter import ShooterControl
 
@@ -39,6 +39,11 @@ joystickTwistDeadband = Rescale((-1, 1), (-1, 1), 0.2)
 CTRE_PCM = PneumaticsModuleType.CTREPCM
 TARGET_CARGO = 0
 TARGET_GOAL = 1
+
+FIELD_ORIENTED = 0  # drive orientation
+ROBOT_ORIENTED = 1
+AUTO_DRIVE = 0  # drive mode
+MANUAL_DRIVE = 1
 
 
 class FROGbot(magicbot.MagicRobot):
@@ -68,6 +73,9 @@ class FROGbot(magicbot.MagicRobot):
     rotationP = magicbot.tunable(0.3)
     rotationI = magicbot.tunable(0.0)
     rotationD = magicbot.tunable(0.04)
+
+    rotationFactor = tunable(0.32)
+    speedFactor = tunable(0.065)
 
     def allianceColor(self):
 
@@ -148,16 +156,24 @@ class FROGbot(magicbot.MagicRobot):
 
         self.driverstation = DriverStation
 
-        self.autoTargeting = False
+        # keep robot rotated to a target
+        self.targetLock = False
+        # autoDrive is for moving the robot toward a target,
+        # particularly the balls/cargo
+        self.autoDrive = False
         self.objectTargeted = TARGET_GOAL
 
         self.xOrig = self.yOrig = self.tOrig = 0
 
         self.rotationController = PIDController(0, 0, 0)
 
-    @feedback(key="Auto Targeting")
-    def getAutoTargeting(self):
-        return self.autoTargeting
+    @feedback(key="Auto Drive")
+    def getAutoDrive(self):
+        return self.autoDrive
+
+    @feedback(key="Target Lock")
+    def getTargetLock(self):
+        return self.targetLock
 
     @feedback(key="Auto Intake")
     def getAutoIntake(self):
@@ -172,10 +188,17 @@ class FROGbot(magicbot.MagicRobot):
         return ["CARGO", "GOAL"][self.objectTargeted]
 
     @feedback(key="TargetX")
-    def getTarget(self):
+    def getTargetX(self):
         return [
-            self.vision.getCargoXAverage(),
-            self.vision.getGoalXAverage(),
+            self.vision.getFilteredCargoYaw(),
+            self.vision.getFilteredGoalYaw(),
+        ][self.objectTargeted]
+
+    @feedback(key="TargetY")
+    def getTargetY(self):
+        return [
+            self.vision.getFilteredCargoPitch(),
+            self.vision.getFilteredGoalPitch(),
         ][self.objectTargeted]
 
     @feedback()
@@ -188,14 +211,14 @@ class FROGbot(magicbot.MagicRobot):
     def teleopInit(self):
         """Called when teleop starts; optional"""
         self.swerveChassis.enable()
-        self.autoTargeting = False
+        self.autoDrive = False
         # self.firecontrol.engage()
 
-    def getRotationPID(self, target):
-        self.rotationController.setP(self.rotationP)
-        self.rotationController.setI(self.rotationI)
-        self.rotationController.setD(self.rotationD)
-        return self.rotationController.calculate(target)
+    # def getRotationPID(self, target):
+    #     self.rotationController.setP(self.rotationP)
+    #     self.rotationController.setI(self.rotationI)
+    #     self.rotationController.setD(self.rotationD)
+    #     return self.rotationController.calculate(target)
 
     def teleopPeriodic(self):
         """Called on each iteration of the control loop"""
@@ -233,10 +256,8 @@ class FROGbot(magicbot.MagicRobot):
 
         if (
             self.gunnerControl.getRightTriggerAxis() > 0.5
-            and not self.firecontrol.autoFire
         ):
-            if not self.firecontrol.is_executing:
-                self.firecontrol.next_state("waitForFlywheel")
+            self.firecontrol.next_state_now("fire")
             self.firecontrol.engage()
 
         if self.firecontrol.autoIntake or self.firecontrol.autoFire:
@@ -259,11 +280,12 @@ class FROGbot(magicbot.MagicRobot):
 
         # toggles targeting mode
         if self.gunnerControl.getXButtonReleased():
-            self.autoTargeting = [True, False][self.autoTargeting]
-            if self.autoTargeting:
-                self.vision.deactivateDriverMode()
-            else:
-                self.vision.activateDriverMode()
+            self.targetLock = [True, False][self.targetLock]
+            self.autoDrive = [True, False][self.autoDrive]
+            # if self.autoDrive:
+            #     self.vision.deactivateDriverMode()
+            # else:
+            #     self.vision.activateDriverMode()
 
         # allows driver to override targeting control of rotation
         if self.driveStick.getRawButton(2):
@@ -274,27 +296,53 @@ class FROGbot(magicbot.MagicRobot):
         self.xOrig = joystickAxisDeadband(self.driveStick.getFieldForward())
         self.yOrig = joystickAxisDeadband(self.driveStick.getFieldLeft())
 
-        target = self.getTarget()
+        targetX = self.getTargetX()
+        targetY = self.getTargetY()
 
-        if self.autoTargeting and target and not self.overrideTargeting:
-            # self.tOrig = -(math.copysign(abs(visionDeadband(target)), target)) * .5
-            self.tOrig = self.getRotationPID(target)
-            # -math.copysign(abs(target * .5) + .15, target)
+        # ! If we are in autodrive and we have a target, use it
+        # ! otherwise use manual drive
+        # ! autodrive will need to not use field-oriented
+        # ! we also have auto rotate to target.... call target lock?
+        # ! for targeting the goal, we will most likely want to
+        # !   allow the joystick to control X and Y, get rotation from
+        # !   targeting.
+
+        vX = vY = vT = 0
+
+        if self.targetLock and targetX and not self.overrideTargeting:
+            # self.tOrig = self.getRotationPID(target)
+            vT = -math.copysign(abs((targetX/26.75) * self.rotationFactor), targetX)
         else:
             new_twist = joystickTwistDeadband(
                 self.driveStick.getFieldRotation()
             )
-            self.tOrig = math.copysign(new_twist**2, new_twist)
+            vT = math.copysign(new_twist**2, new_twist)
 
-        # Get driver controls
-        vX, vY, vT = (
-            math.copysign(self.xOrig**2, self.xOrig),
-            math.copysign(self.yOrig**2, self.yOrig),
-            self.tOrig,
-        )
+        if (
+            self.autoDrive
+            and targetY
+            and not self.overrideTargeting
+            and self.objectTargeted == TARGET_CARGO
+        ):
+            targetY = (targetY + LC_Y_div) / 2
+            vX = math.copysign(
+                abs(((targetY + 1) / 2) * self.speedFactor), targetY
+            )
+            self.driveMode = ROBOT_ORIENTED
+            # self.driveController = AUTO_DRIVE
+            vY = 0
+        else:
+            vX, vY = (
+                math.copysign(self.xOrig**2, self.xOrig),
+                math.copysign(self.yOrig**2, self.yOrig),
+            )
+            self.driveMode = FIELD_ORIENTED
 
         if vX or vY or vT:
-            self.swerveChassis.field_oriented_drive(vX, vY, vT)
+            if self.driveMode == FIELD_ORIENTED:
+                self.swerveChassis.field_oriented_drive(vX, vY, vT)
+            else:
+                self.swerveChassis.drive(vX, vY, vT)
 
         if self.driveStick.getRawButtonPressed(3):
             self.gyro.resetGyro()
