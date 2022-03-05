@@ -16,13 +16,14 @@ from magicbot import tunable
 
 # TODO Find out the Min/Max of the velocity and the tolerence for the Flywheel
 FLYWHEEL_MODE = ControlMode.Velocity
-FLYWHEEL_PID = TalonPID(0, p=0, f=0.0475)
+LOWER_FLYWHEEL_PID = TalonPID(0, p=0, i=0, d=0, f=0.0473)
+UPPER_FLYWHEEL_PID = TalonPID(0, p=0, i=0, d=0, f=0.04655)
 FLYWHEEL_VELOCITY = 0
 FLYWHEEL_MAX_VEL = 22000  # Falcon ()
 FLYWHEEL_MAX_ACCEL = FLYWHEEL_MAX_VEL / 50
 FLYWHEEL_MAX_DECEL = -FLYWHEEL_MAX_ACCEL
 FLYWHEEL_INCREMENT = 100
-FLYWHEEL_VEL_TOLERANCE = 100
+FLYWHEEL_VEL_TOLERANCE = 0.02
 FLYWHEEL_LOOP_RAMP = 0.25
 
 ULTRASONIC_DISTANCE_INCHES = 9.5  # 8.65
@@ -51,7 +52,7 @@ class Flywheel:
     def isReady(self):
         return (
             abs(self.getVelocity() - self.getCommandedVelocity())
-            < FLYWHEEL_VEL_TOLERANCE
+            < FLYWHEEL_VEL_TOLERANCE * self.getCommandedVelocity()
         )
 
     # read current encoder velocity
@@ -79,7 +80,7 @@ class Flywheel:
         # = setInverted(True)
         # self.motor.setInverted(TalonFXInvertType.CounterClockwise)
         self.motor.setNeutralMode(NeutralMode.Coast)
-        FLYWHEEL_PID.configTalon(self.motor)
+        #FLYWHEEL_PID.configTalon(self.motor)
         # use closed loop ramp to accelerate smoothly
         self.motor.configClosedloopRamp(FLYWHEEL_LOOP_RAMP)
 
@@ -169,6 +170,8 @@ class FROGShooter:
         self.upperFlywheel.motor.setInverted(False)
         self.lowerFlywheel.motor.setSensorPhase(True)
         self.upperFlywheel.motor.setSensorPhase(True)
+        LOWER_FLYWHEEL_PID.configTalon(self.lowerFlywheel.motor)
+        UPPER_FLYWHEEL_PID.configTalon(self.upperFlywheel.motor)
         self.set_manual()
         self.enable()
 
@@ -242,14 +245,12 @@ class ShooterControl(StateMachine):
     vision: FROGVision
     color: FROGColor
     #
-
-    flywheel_speed = tunable(10000)
+    flywheel_speed = tunable(0)
 
     def __init__(self):
         self.autoIntake = False
         self.autoFire = False
         self.ballColor = None
-        self.fireCommanded = False
 
     @state(first=True)
     def waitForBall(self, initial_call):
@@ -295,19 +296,25 @@ class ShooterControl(StateMachine):
 
     @state()
     def waitForFlywheel(self):
-
-        flyspeed = self.calculateFlywheelSpeed()
+        if self.flywheel_speed > 0:
+            flyspeed = self.flywheel_speed
+        else:
+            flyspeed = self.calculateFlywheelSpeed()
         self.shooter.setFlywheelSpeeds(flyspeed)
-        if (
-            not flyspeed == 0
-            and self.shooter.isReady()
-            and self.isOnTarget()
-        ):
-            self.next_state("fire")
 
-    # @timed_state(duration=1, must_finish=True, next_state="fire")
-    # def waitToFire(self):
-    #     pass
+        if not flyspeed == 0:
+            if self.shooter.isReady() and self.fireCommanded:
+                self.next_state("waitToFire")
+            
+            elif (
+                self.shooter.isReady()
+                and self.isOnTarget()
+            ):
+                self.next_state("waitToFire")
+
+    @timed_state(duration=.25, must_finish=True, next_state="fire")
+    def waitToFire(self):
+        pass
 
     @timed_state(duration=1, must_finish=True, next_state="release")
     def fire(self, initial_call):
@@ -327,7 +334,8 @@ class ShooterControl(StateMachine):
 
     @feedback()
     def isOnTarget(self):
-        return abs(self.vision.getFilteredGoalYaw()) < TARGET_TOLERANCE
+        if yaw := self.vision.getFilteredGoalYaw():
+            return abs(yaw) < TARGET_TOLERANCE
 
     @feedback()
     def getBallColor(self):
@@ -341,7 +349,7 @@ class ShooterControl(StateMachine):
 
     def calculateFlywheelSpeed(self):
         if range := self.vision.getRangeInches():
-            return 8000 + range
+            return 17.895*range + 10244
         else:
             return 0
 
