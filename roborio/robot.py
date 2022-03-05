@@ -70,12 +70,9 @@ class FROGbot(magicbot.MagicRobot):
     lowerFlywheel: Flywheel
     upperFlywheel: Flywheel
 
-    rotationP = magicbot.tunable(0.3)
-    rotationI = magicbot.tunable(0.0)
-    rotationD = magicbot.tunable(0.04)
 
-    rotationFactor = tunable(0.32)
-    speedFactor = tunable(0.065)
+    rotationFactor = tunable(0.30)
+    speedFactor = tunable(0.045)
 
     def allianceColor(self):
 
@@ -126,6 +123,10 @@ class FROGbot(magicbot.MagicRobot):
         self.lowerFlywheel_motor = WPI_TalonFX(41)
         self.upperFlywheel_motor = WPI_TalonFX(42)
 
+        self.climber_stage1extend = WPI_TalonFX(51)
+        self.climber_stage1tilt = WPI_TalonFX(52)
+        self.climber_stage2extend = WPI_TalonFX(53)
+
         # TODO:  Add in CANdle on channel 35
 
         # CANifier for LIDAR
@@ -140,6 +141,11 @@ class FROGbot(magicbot.MagicRobot):
         self.intake_retrieve = Solenoid(CTRE_PCM, 2)
         self.intake_hold = Solenoid(CTRE_PCM, 1)
         self.shooter_launch = Solenoid(CTRE_PCM, 0)
+
+        self.climber_stage1claw = Solenoid(CTRE_PCM, 3)  # grabber - hook
+        self.climber_stage2tilt = Solenoid(CTRE_PCM, 4)  # arm 2 tilt
+        self.climber_stage3tilt = Solenoid(CTRE_PCM, 5)  # arm 3 tilt
+        self.climber_stage3release = Solenoid(CTRE_PCM, 6)  # pin release
 
         # config for saitek joystick
         # self.driveStick = FROGStick(0, 0, 1, 3, 2)
@@ -254,11 +260,12 @@ class FROGbot(magicbot.MagicRobot):
                 self.firecontrol.next_state("waitForBall")
             self.firecontrol.engage()
 
-        if (
-            self.gunnerControl.getRightTriggerAxis() > 0.5
-        ):
-            self.firecontrol.next_state_now("fire")
+        if self.gunnerControl.getRightTriggerAxis() > 0.5:
+            self.firecontrol.next_state_now("waitForFlywheel")
+            self.firecontrol.fireCommanded = True
             self.firecontrol.engage()
+        else:
+            self.firecontrol.fireCommanded = False
 
         if self.firecontrol.autoIntake or self.firecontrol.autoFire:
             self.firecontrol.engage()
@@ -311,7 +318,9 @@ class FROGbot(magicbot.MagicRobot):
 
         if self.targetLock and targetX and not self.overrideTargeting:
             # self.tOrig = self.getRotationPID(target)
-            vT = -math.copysign(abs((targetX/26.75) * self.rotationFactor), targetX)
+            vT = -math.copysign(
+                abs((targetX / 26.75) * self.rotationFactor), targetX
+            )
         else:
             new_twist = joystickTwistDeadband(
                 self.driveStick.getFieldRotation()
