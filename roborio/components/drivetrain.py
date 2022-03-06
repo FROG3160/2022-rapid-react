@@ -11,6 +11,7 @@ from ctre import (
     TalonFXConfiguration,
     CANCoderConfiguration,
     BaseTalonPIDSetConfiguration,
+    StatusFrameEnhanced,
 )
 from wpilib import Field2d
 from wpimath.geometry import Translation2d, Rotation2d
@@ -258,6 +259,9 @@ class SwerveModule:
         self.resetRemoteEncoder()
 
         self.steer.configAllSettings(cfgSteerMotor)
+        self.steer.setStatusFramePeriod(
+            StatusFrameEnhanced.Status_1_General, 250
+        )
         # define the remote CANCoder as Remote Feedback 0
         self.steer.configRemoteFeedbackFilter(
             self.encoder.getDeviceNumber(), RemoteSensorSource.CANCoder, 0
@@ -276,6 +280,9 @@ class SwerveModule:
         self.steer.setNeutralMode(NeutralMode.Brake)
         # configure drive motor
         self.drive.configAllSettings(cfgDriveMotor)
+        self.drive.setStatusFramePeriod(
+            StatusFrameEnhanced.Status_1_General, 250
+        )
         self.drive.setInverted(TalonFXInvertType.Clockwise)
         self.drive.configClosedloopRamp(0.25)
 
@@ -340,7 +347,9 @@ class SwerveChassis:
         # takes values from the joystick and translates it
         # into chassis movement
         self.speeds = ChassisSpeeds(
-            vX * kMaxMetersPerSec, vY * kMaxMetersPerSec, vT * kMaxRadiansPerSec
+            vX * kMaxMetersPerSec,
+            vY * kMaxMetersPerSec,
+            vT * kMaxRadiansPerSec
         )
 
     def field_oriented_drive(self, vX, vY, vT):
