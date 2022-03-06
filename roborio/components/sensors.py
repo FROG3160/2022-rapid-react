@@ -53,6 +53,14 @@ class FROGGyro:
     def getAngleAdjustment(self):
         return self.gyro.getAngleAdjustment()
 
+    @feedback()
+    def getPitch(self):
+        return self.gyro.getPitch()
+
+    @feedback()
+    def getRoll(self):
+        return self.gyro.getRoll()
+
 
 class FROGdar:
     canifier: CANifier
