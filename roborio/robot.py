@@ -24,6 +24,7 @@ from components.shooter import FROGShooter, Flywheel, Intake
 from components.vision import FROGVision, LC_Y_div
 from components.common import Rescale
 from components.shooter import ShooterControl
+from components.climber import FROGLift
 
 
 # robot characteristics
@@ -52,6 +53,7 @@ class FROGbot(magicbot.MagicRobot):
     """
 
     firecontrol: ShooterControl
+    lift: FROGLift
 
     gyro: FROGGyro
     lidar: FROGdar
@@ -123,9 +125,9 @@ class FROGbot(magicbot.MagicRobot):
         self.lowerFlywheel_motor = WPI_TalonFX(41)
         self.upperFlywheel_motor = WPI_TalonFX(42)
 
-        self.climber_stage1extend = WPI_TalonFX(51)
-        self.climber_stage1tilt = WPI_TalonFX(52)
-        self.climber_stage2extend = WPI_TalonFX(53)
+        self.lift_stage1extend = WPI_TalonFX(51)
+        self.lift_stage1tilt = WPI_TalonFX(52)
+        self.lift_stage2extend = WPI_TalonFX(53)
 
         # TODO:  Add in CANdle on channel 35
 
@@ -142,10 +144,10 @@ class FROGbot(magicbot.MagicRobot):
         self.intake_hold = Solenoid(CTRE_PCM, 1)
         self.shooter_launch = Solenoid(CTRE_PCM, 0)
 
-        self.climber_stage1claw = Solenoid(CTRE_PCM, 3)  # grabber - hook
-        self.climber_stage2tilt = Solenoid(CTRE_PCM, 4)  # arm 2 tilt
-        self.climber_stage3tilt = Solenoid(CTRE_PCM, 5)  # arm 3 tilt
-        self.climber_stage3release = Solenoid(CTRE_PCM, 6)  # pin release
+        self.lift_stage1claw = Solenoid(CTRE_PCM, 3)  # grabber - hook
+        self.lift_stage2tilt = Solenoid(CTRE_PCM, 4)  # arm 2 tilt
+        self.lift_stage3tilt = Solenoid(CTRE_PCM, 5)  # arm 3 tilt
+        self.lift_stage3release = Solenoid(CTRE_PCM, 6)  # pin release
 
         # config for saitek joystick
         # self.driveStick = FROGStick(0, 0, 1, 3, 2)
@@ -293,6 +295,28 @@ class FROGbot(magicbot.MagicRobot):
             #     self.vision.deactivateDriverMode()
             # else:
             #     self.vision.activateDriverMode()
+
+        if self.gunnerControl.getLeftY() < -0.5:
+            self.lift.extendStage1()
+        elif self.gunnerControl.getLeftY() > 0.5:
+            self.lift.retractStage1()
+        else:
+            self.lift.stage1extend.set(0)
+
+        if self.gunnerControl.getRightY() < -0.5:
+            self.lift.extendStage2()
+        elif self.gunnerControl.getRightY() > 0.5:
+            self.lift.retractStage2()
+        else:
+            self.lift.stage2extend.set(0)
+
+
+        if self.gunnerControl.getPOV() == 0:
+            self.lift.tiltStage1Forward()
+        elif self.gunnerControl.getPOV() == 180:
+            self.lift.tiltStage1Back()
+        else:
+            self.lift.stage1tilt.set(0)
 
         # allows driver to override targeting control of rotation
         if self.driveStick.getRawButton(2):
