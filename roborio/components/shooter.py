@@ -23,7 +23,7 @@ FLYWHEEL_MAX_VEL = 22000  # Falcon ()
 FLYWHEEL_MAX_ACCEL = FLYWHEEL_MAX_VEL / 50
 FLYWHEEL_MAX_DECEL = -FLYWHEEL_MAX_ACCEL
 FLYWHEEL_INCREMENT = 100
-FLYWHEEL_VEL_TOLERANCE = 0.02
+FLYWHEEL_VEL_TOLERANCE = 0.03
 FLYWHEEL_LOOP_RAMP = 0.25
 
 ULTRASONIC_DISTANCE_INCHES = 9.5  # 8.65
@@ -41,6 +41,7 @@ class Flywheel:
         self.enabled = False
         self._controlMode = FLYWHEEL_MODE
         self._velocity = FLYWHEEL_VELOCITY
+        self.tolerance = 0
 
     def disable(self):
         self.enabled = False
@@ -52,7 +53,7 @@ class Flywheel:
     def isReady(self):
         return (
             abs(self.getVelocity() - self.getCommandedVelocity())
-            < FLYWHEEL_VEL_TOLERANCE * self.getCommandedVelocity()
+            <= self.tolerance * self.getCommandedVelocity()
         )
 
     # read current encoder velocity
@@ -80,7 +81,7 @@ class Flywheel:
         # = setInverted(True)
         # self.motor.setInverted(TalonFXInvertType.CounterClockwise)
         self.motor.setNeutralMode(NeutralMode.Coast)
-        #FLYWHEEL_PID.configTalon(self.motor)
+        # FLYWHEEL_PID.configTalon(self.motor)
         # use closed loop ramp to accelerate smoothly
         self.motor.configClosedloopRamp(FLYWHEEL_LOOP_RAMP)
 
@@ -140,6 +141,7 @@ class FROGShooter:
     lowerFlywheel: Flywheel
     upperFlywheel: Flywheel
     launch: Solenoid
+    flywheel_tolerance = tunable(0.03)
 
     def __init__(self):
         self._enable = False
@@ -207,6 +209,8 @@ class FROGShooter:
 
     @feedback()
     def isReady(self):
+        self.lowerFlywheel.tolerance = self.flywheel_tolerance
+        self.upperFlywheel.tolerance = self.flywheel_tolerance
         return (
             self.lowerFlywheel.isReady()
             and self.upperFlywheel.isReady()
@@ -246,6 +250,7 @@ class ShooterControl(StateMachine):
     color: FROGColor
     #
     flywheel_speed = tunable(0)
+    flywheel_trim = tunable(1.0)
 
     def __init__(self):
         self.autoIntake = False
@@ -305,14 +310,10 @@ class ShooterControl(StateMachine):
         if not flyspeed == 0:
             if self.shooter.isReady() and self.fireCommanded:
                 self.next_state("waitToFire")
-            
-            elif (
-                self.shooter.isReady()
-                and self.isOnTarget()
-            ):
+            elif self.shooter.isReady() and self.isOnTarget():
                 self.next_state("waitToFire")
 
-    @timed_state(duration=.25, must_finish=True, next_state="fire")
+    @timed_state(duration=0.25, must_finish=True, next_state="fire")
     def waitToFire(self):
         pass
 
@@ -346,10 +347,11 @@ class ShooterControl(StateMachine):
     @feedback()
     def getBallInPosition(self):
         return self.color.getProximity() > PROXIMITY_THRESHOLD
-
+    
+    @feedback()
     def calculateFlywheelSpeed(self):
         if range := self.vision.getRangeInches():
-            return 17.895*range + 10244
+            return (16.908 * range + 9282) * self.flywheel_trim
         else:
             return 0
 
@@ -358,6 +360,12 @@ class ShooterControl(StateMachine):
         self.shooter.raiseLaunch()
         self.intake.deactivateRetrieve()
         self.shooter.setFlywheelSpeeds(0)
+
+    def raiseFlywheelTrim(self):
+        self.flywheel_trim += .005
+
+    def lowerFlywheelTrim(self):
+        self.flywheel_trim -= .005
 
     def commandToFire(self, mode):
         self.fireCommanded = mode
