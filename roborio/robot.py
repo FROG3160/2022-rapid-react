@@ -72,9 +72,8 @@ class FROGbot(magicbot.MagicRobot):
     lowerFlywheel: Flywheel
     upperFlywheel: Flywheel
 
-
-    rotationFactor = tunable(0.30)
-    speedFactor = tunable(0.045)
+    rotationFactor = tunable(0.28)
+    speedFactor = tunable(0.06)
 
     def allianceColor(self):
 
@@ -290,7 +289,7 @@ class FROGbot(magicbot.MagicRobot):
         # toggles targeting mode
         if self.gunnerControl.getXButtonReleased():
             self.targetLock = [True, False][self.targetLock]
-            self.autoDrive = [True, False][self.autoDrive]
+            # self.autoDrive = [True, False][self.autoDrive]
             # if self.autoDrive:
             #     self.vision.deactivateDriverMode()
             # else:
@@ -304,19 +303,18 @@ class FROGbot(magicbot.MagicRobot):
             self.lift.stage1extend.set(0)
 
         if self.gunnerControl.getRightY() < -0.5:
-            self.lift.extendStage2()
+            self.lift.tiltStage1Forward()
         elif self.gunnerControl.getRightY() > 0.5:
-            self.lift.retractStage2()
+            self.lift.tiltStage1Back()
         else:
             self.lift.stage2extend.set(0)
 
 
         if self.gunnerControl.getPOV() == 0:
-            self.lift.tiltStage1Forward()
-        elif self.gunnerControl.getPOV() == 180:
-            self.lift.tiltStage1Back()
-        else:
-            self.lift.stage1tilt.set(0)
+            self.firecontrol.raiseFlywheelTrim()
+        
+        if self.gunnerControl.getPOV() == 180:
+            self.firecontrol.lowerFlywheelTrim()
 
         # allows driver to override targeting control of rotation
         if self.driveStick.getRawButton(2):
@@ -339,6 +337,17 @@ class FROGbot(magicbot.MagicRobot):
         # !   targeting.
 
         vX = vY = vT = 0
+
+        if self.driveStick.getTrigger():
+            self.autoDrive = True
+        else:
+            self.autoDrive = False
+
+        if self.driveStick.getRawButtonPressed(7):
+            self.lift.activateClaw()
+
+        if self.driveStick.getRawButtonPressed(8):
+            self.lift.deactivateClaw()
 
         if self.targetLock and targetX and not self.overrideTargeting:
             # self.tOrig = self.getRotationPID(target)
