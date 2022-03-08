@@ -349,7 +349,7 @@ class FROGbot(magicbot.MagicRobot):
             new_twist = joystickTwistDeadband(
                 self.driveStick.getFieldRotation()
             )
-            vT = math.copysign(new_twist**2, new_twist)
+            vT = math.copysign(new_twist**3, new_twist)
 
         if (
             self.autoDrive
