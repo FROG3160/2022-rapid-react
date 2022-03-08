@@ -1,10 +1,10 @@
-from ctre import TalonFX, LimitSwitchSource, LimitSwitchNormal
+from ctre import TalonFX, LimitSwitchSource, LimitSwitchNormal, StatusFrameEnhanced
 from wpilib import Solenoid
-from magicbot import tunable
-from sensors import FROGGyro
+from magicbot import tunable, feedback
+from components.sensors import FROGGyro
 
 STAGE1_THRESHOLD = 475757.0
-STAGE1_TILT_THRESHOLD = 19000
+STAGE1_TILT_THRESHOLD = 24000
 STAGE2_THRESHOLD = 164638.0
 
 limitSwitchConfig = (
@@ -25,7 +25,10 @@ class FROGLift:
     
     gyro: FROGGyro
 
-    stage1speed = tunable(0.3)
+    stage1speed = tunable(0.4)
+    stage2speed = tunable(0.4)
+    stage1RotateForward = tunable(0.08)
+    stage1RotateBack = tunable(0.15)
 
     def setup(self):
         # these settings are different for each motor, so we
@@ -38,6 +41,9 @@ class FROGLift:
         self.stage1extend.configForwardSoftLimitThreshold(STAGE1_THRESHOLD)
         self.stage1extend.configReverseSoftLimitEnable(True)
         self.stage1extend.configReverseSoftLimitThreshold(0)
+        self.stage1extend.setStatusFramePeriod(
+            StatusFrameEnhanced.Status_1_General, 250
+        )
         
         self.stage2extend.setInverted(True)
         self.stage2extend.setSensorPhase(True)
@@ -47,20 +53,83 @@ class FROGLift:
         self.stage2extend.configForwardSoftLimitThreshold(STAGE2_THRESHOLD)
         self.stage2extend.configReverseSoftLimitEnable(True)
         self.stage2extend.configReverseSoftLimitThreshold(0)
+        self.stage2extend.setStatusFramePeriod(
+            StatusFrameEnhanced.Status_1_General, 250
+        )
 
         self.stage1tilt.setSensorPhase(True)
-        self.stage1tilt.setInverted(False)
+        self.stage1tilt.setInverted(True)
         self.stage1tilt.configForwardLimitSwitchSource(*limitSwitchConfig)
         self.stage1tilt.configReverseLimitSwitchSource(*limitSwitchConfig)
+        self.stage1tilt.configForwardSoftLimitEnable(True)
+        self.stage1tilt.configForwardSoftLimitThreshold(STAGE1_TILT_THRESHOLD)
+        self.stage1tilt.configReverseSoftLimitEnable(True)
+        self.stage1tilt.configReverseSoftLimitThreshold(0)
+        self.stage1tilt.setStatusFramePeriod(
+            StatusFrameEnhanced.Status_1_General, 250
+        )
 
     def extendStage1(self):
-        self.stage1extend.set(self.stage1speed)
+        if not self.stage1extend.isFwdLimitSwitchClosed():
+            self.stage1extend.set(self.stage1speed)
+        else:
+            self.stage1extend.set(0)
+
+    def extendStage2(self):
+        if not self.stage2extend.isFwdLimitSwitchClosed():
+            self.stage2extend.set(self.stage2speed)
+        else:
+            self.stage2extend.set(0)
+
+    def retractStage2(self):
+        if not self.stage2extend.isRevLimitSwitchClosed():
+            self.stage2extend.set(-self.stage2speed)
+        else:
+            self.stage2extend.set(0)
 
     def retractStage1(self):
-        self.stage1extend.set(-self.stage1speed)
+        if not self.stage1extend.isRevLimitSwitchClosed():
+            self.stage1extend.set(-self.stage1speed)
+        else:
+            self.stage1extend.set(0)
 
+    def tiltStage1Forward(self):
+        if not self.stage1tilt.isFwdLimitSwitchClosed():
+            self.stage1tilt.set(self.stage1RotateForward)
+        else:
+            self.stage1tilt.set(0)
+
+    def tiltStage1Back(self):
+        if not self.stage1tilt.isRevLimitSwitchClosed():
+            self.stage1tilt.set(-self.stage1RotateBack)
+        else:
+            self.stage1tilt.set(0)
+
+    def activateClaw(self):
+        self.stage1claw.set(True)
+
+    def deactivateClaw(self):
+        self.stage1claw.set(False)
     
+    @feedback
+    def getStage1ExtendPosition(self):
+        return self.stage1extend.getSelectedSensorPosition()
 
+    @feedback
+    def getStage1TiltPosition(self):
+        return self.stage1tilt.getSelectedSensorPosition()
+    
+    @feedback
+    def getStage2ExtendPosition(self):
+        return self.stage2extend.getSelectedSensorPosition()
+
+    @feedback
+    def getGyroPitch(self):
+        return self.gyro.getPitch()
+
+    @feedback
+    def getGyroRoll(self):
+        return self.gyro.getRoll()
     
 
 
