@@ -248,9 +248,10 @@ class ShooterControl(StateMachine):
     sonic: FROGsonic
     vision: FROGVision
     color: FROGColor
-    #
+
     flywheel_speed = tunable(0)
     flywheel_trim = tunable(1.0)
+    trimIncrement = tunable(0.01)
 
     def __init__(self):
         self.autoIntake = False
@@ -309,7 +310,7 @@ class ShooterControl(StateMachine):
 
         if not flyspeed == 0:
             if self.shooter.isReady() and self.fireCommanded:
-                self.next_state("waitToFire")
+                self.next_state_now("waitToFire")
             elif self.shooter.isReady() and self.isOnTarget():
                 self.next_state("waitToFire")
 
@@ -347,7 +348,7 @@ class ShooterControl(StateMachine):
     @feedback()
     def getBallInPosition(self):
         return self.color.getProximity() > PROXIMITY_THRESHOLD
-    
+
     @feedback()
     def calculateFlywheelSpeed(self):
         if range := self.vision.getRangeInches():
@@ -362,10 +363,13 @@ class ShooterControl(StateMachine):
         self.shooter.setFlywheelSpeeds(0)
 
     def raiseFlywheelTrim(self):
-        self.flywheel_trim += .005
+        self.flywheel_trim += self.trimIncrement
 
     def lowerFlywheelTrim(self):
-        self.flywheel_trim -= .005
+        self.flywheel_trim -= self.trimIncrement
+
+    def getFlywheelTrim(self):
+        return self.flywheel_trim
 
     def commandToFire(self, mode):
         self.fireCommanded = mode
