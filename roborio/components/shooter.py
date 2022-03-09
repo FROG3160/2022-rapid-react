@@ -28,7 +28,6 @@ FLYWHEEL_LOOP_RAMP = 0.25
 
 ULTRASONIC_DISTANCE_INCHES = 9.5  # 8.65
 PROXIMITY_THRESHOLD = 1000
-TARGET_TOLERANCE = 3.0
 
 RED = DriverStation.Alliance.kRed  # 0
 BLUE = DriverStation.Alliance.kBlue  # 1
@@ -252,6 +251,7 @@ class ShooterControl(StateMachine):
     flywheel_speed = tunable(0)
     flywheel_trim = tunable(1.0)
     trimIncrement = tunable(0.01)
+    target_tolerance = tunable(5.0)
 
     def __init__(self):
         self.autoIntake = False
@@ -337,7 +337,7 @@ class ShooterControl(StateMachine):
     @feedback()
     def isOnTarget(self):
         if yaw := self.vision.getFilteredGoalYaw():
-            return abs(yaw) < TARGET_TOLERANCE
+            return abs(yaw) < self.target_tolerance
 
     @feedback()
     def getBallColor(self):
