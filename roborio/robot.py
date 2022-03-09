@@ -56,7 +56,7 @@ class FROGbot(magicbot.MagicRobot):
     lift: FROGLift
 
     gyro: FROGGyro
-    lidar: FROGdar
+    #lidar: FROGdar
     color: FROGColor
     vision: FROGVision
     swerveChassis: SwerveChassis
@@ -125,13 +125,13 @@ class FROGbot(magicbot.MagicRobot):
         self.upperFlywheel_motor = WPI_TalonFX(42)
 
         self.lift_stage1extend = WPI_TalonFX(51)
-        self.lift_stage1tilt = WPI_TalonFX(52)
-        self.lift_stage2extend = WPI_TalonFX(53)
+        # self.lift_stage1tilt = WPI_TalonFX(52)
+        # self.lift_stage2extend = WPI_TalonFX(53)
 
         # TODO:  Add in CANdle on channel 35
 
         # CANifier for LIDAR
-        self.lidar_canifier = CANifier(36)
+        # self.lidar_canifier = CANifier(36)
         self.sonic_cargoUltrasonic = wpilib.AnalogInput(0)
         self.sonic_mm = 25.4
         self.sonic_mv = 9.8
@@ -143,10 +143,10 @@ class FROGbot(magicbot.MagicRobot):
         self.intake_hold = Solenoid(CTRE_PCM, 1)
         self.shooter_launch = Solenoid(CTRE_PCM, 0)
 
-        self.lift_stage1claw = Solenoid(CTRE_PCM, 3)  # grabber - hook
-        self.lift_stage2tilt = Solenoid(CTRE_PCM, 4)  # arm 2 tilt
-        self.lift_stage3tilt = Solenoid(CTRE_PCM, 5)  # arm 3 tilt
-        self.lift_stage3release = Solenoid(CTRE_PCM, 6)  # pin release
+        # self.lift_stage1claw = Solenoid(CTRE_PCM, 3)  # grabber - hook
+        # self.lift_stage2tilt = Solenoid(CTRE_PCM, 4)  # arm 2 tilt
+        # self.lift_stage3tilt = Solenoid(CTRE_PCM, 5)  # arm 3 tilt
+        # self.lift_stage3release = Solenoid(CTRE_PCM, 6)  # pin release
 
         # config for saitek joystick
         # self.driveStick = FROGStick(0, 0, 1, 3, 2)
@@ -302,12 +302,12 @@ class FROGbot(magicbot.MagicRobot):
         else:
             self.lift.stage1extend.set(0)
 
-        if self.gunnerControl.getRightY() < -0.5:
-            self.lift.tiltStage1Forward()
-        elif self.gunnerControl.getRightY() > 0.5:
-            self.lift.tiltStage1Back()
-        else:
-            self.lift.stage2extend.set(0)
+        # if self.gunnerControl.getRightY() < -0.5:
+        #     self.lift.tiltStage1Forward()
+        # elif self.gunnerControl.getRightY() > 0.5:
+        #     self.lift.tiltStage1Back()
+        # else:
+        #     self.lift.stage2extend.set(0)
 
 
         if self.gunnerControl.getPOV() == 0:
