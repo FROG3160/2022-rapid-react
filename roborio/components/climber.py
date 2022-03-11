@@ -1,4 +1,4 @@
-from ctre import TalonFX, LimitSwitchSource, LimitSwitchNormal, StatusFrameEnhanced, SensorInitializationStrategy
+from ctre import TalonFX, LimitSwitchSource, LimitSwitchNormal, StatusFrameEnhanced, SensorInitializationStrategy, NeutralMode
 from wpilib import Solenoid
 from magicbot import tunable, feedback
 from components.sensors import FROGGyro
@@ -44,6 +44,7 @@ class FROGLift:
         self.stage1extend.setStatusFramePeriod(
             StatusFrameEnhanced.Status_1_General, 250
         )
+        self.stage1extend.setNeutralMode(NeutralMode.Brake)
         
         # self.stage2extend.setInverted(True)
         # self.stage2extend.setSensorPhase(True)
