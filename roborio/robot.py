@@ -168,7 +168,7 @@ class FROGbot(magicbot.MagicRobot):
         # self.driverstation = DriverStation
 
         # keep robot rotated to a target
-        self.targetLock = False
+        self.targetLock = True
         # autoDrive is for moving the robot toward a target,
         # particularly the balls/cargo
         self.autoDrive = False
@@ -232,6 +232,12 @@ class FROGbot(magicbot.MagicRobot):
         self.swerveChassis.enable()
         self.autoDrive = False
         self.vision.setup()
+        if self.firecontrol.getBallColor() is not None:
+            self.firecontrol.next_state('holdBall')
+            self.objectTargeted = TARGET_GOAL
+        else:
+            self.objectTargeted = TARGET_CARGO
+        
         # self.firecontrol.engage()
 
     # def getRotationPID(self, target):

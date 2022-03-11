@@ -255,8 +255,8 @@ class ShooterControl(StateMachine):
     target_tolerance = tunable(5.0)
 
     def __init__(self):
-        self.autoIntake = False
-        self.autoFire = False
+        self.autoIntake = True
+        self.autoFire = True
         self.ballColor = None
         self.driverstation = DriverStation
 
