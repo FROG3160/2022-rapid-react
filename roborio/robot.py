@@ -224,6 +224,7 @@ class FROGbot(magicbot.MagicRobot):
         return self.vX, self.vY, self.vT
 
     def autonomousInit(self):
+        self.swerveChassis.enable()
         pass
 
     def teleopInit(self):
