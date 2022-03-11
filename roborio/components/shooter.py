@@ -52,7 +52,8 @@ class Flywheel:
     def isReady(self):
         return (
             abs(self.getVelocity() - self.getCommandedVelocity())
-            <= self.tolerance * self.getCommandedVelocity()
+            <= self.tolerance * self.getCommandedVelocity() and
+            self.getCommandedVelocity() > 0
         )
 
     # read current encoder velocity
@@ -201,10 +202,10 @@ class FROGShooter:
         self.ratio_upper = val
 
     def raiseLaunch(self):
-        self.launch.set(False)
+        self.launch.set(True)
 
     def dropLaunch(self):
-        self.launch.set(True)
+        self.launch.set(False)
 
     @feedback()
     def isReady(self):
@@ -257,6 +258,7 @@ class ShooterControl(StateMachine):
         self.autoIntake = False
         self.autoFire = False
         self.ballColor = None
+        self.driverstation = DriverStation
 
     @state(first=True)
     def waitForBall(self, initial_call):
@@ -280,10 +282,12 @@ class ShooterControl(StateMachine):
             self.shooter.dropLaunch()
 
     @state()
-    def checkBallColor(self):
+    def checkBallColor(self): 
         self.ballColor = self.getBallColor()
         if self.ballColor is not None:
             self.next_state("holdBall")
+            # else:
+            #     self.next_state("release")
         else:
             self.next_state("release")
 
@@ -341,8 +345,9 @@ class ShooterControl(StateMachine):
 
     @feedback()
     def getBallColor(self):
-        # only return a color if we
+        # only return a color if a ball is in position
         if self.getBallInPosition():
+            # returns true if blue, false if red
             return self.color.getRed() < self.color.getBlue()
 
     @feedback()

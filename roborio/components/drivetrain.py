@@ -22,7 +22,7 @@ from wpimath.kinematics import (
     SwerveModuleState,
 )
 import math
-from magicbot import feedback
+from magicbot import feedback, tunable
 from .sensors import FROGGyro
 from .common import DriveUnit
 
@@ -30,6 +30,9 @@ from .common import DriveUnit
 # Motor Control modes
 VELOCITY_MODE = ControlMode.Velocity
 POSITION_MODE = ControlMode.Position
+
+
+
 kMaxFeetPerSec = 8  # taken from SDS specs for MK4i-L2
 # kMaxFeetPerSec = 18 # taken from SDS specks for MK4-L3
 kMaxMetersPerSec = kMaxFeetPerSec * 0.3038
@@ -326,6 +329,9 @@ class SwerveChassis:
     gyro: FROGGyro
     field: Field2d
 
+    linear_offset = tunable(0.09)
+    rotation_offset = tunable(0.17)
+
     def __init__(self):
         self.enabled = False
         self.speeds = ChassisSpeeds(0, 0, 0)
@@ -346,6 +352,13 @@ class SwerveChassis:
     def drive(self, vX, vY, vT):
         # takes values from the joystick and translates it
         # into chassis movement
+        if vX:
+            vX += math.copysign(self.linear_offset, vX)
+        if vY:
+            vY += math.copysign(self.linear_offset, vY)
+        if vT:
+            vT += math.copysign(self.rotation_offset * vT, vT)
+
         self.speeds = ChassisSpeeds(
             vX * kMaxMetersPerSec,
             vY * kMaxMetersPerSec,
@@ -355,12 +368,19 @@ class SwerveChassis:
     def field_oriented_drive(self, vX, vY, vT):
         # takes values from the joystick and translates it
         # into chassis movement
+        if vX:
+            vX += math.copysign(self.linear_offset, vX)
+        if vY:
+            vY += math.copysign(self.linear_offset, vY)
+        if vT:
+            vT += math.copysign(self.rotation_offset * vT, vT)
+   
         self.speeds = ChassisSpeeds.fromFieldRelativeSpeeds(
             vX * kMaxMetersPerSec,
             vY * kMaxMetersPerSec,
             vT * kMaxRadiansPerSec,
             Rotation2d.fromDegrees(-self.gyro.getAngle()),
-        )
+         )
 
     def enable(self):
         self.enabled = True

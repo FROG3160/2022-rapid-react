@@ -42,13 +42,13 @@ class FROGVision:
         # on photon vision web interface.
         self.CARGOcam = photonvision.PhotonCamera("CargoCam")
         self.Goalcam = photonvision.PhotonCamera("TargetPiCam")
-        self.driverstation = DriverStation
 
         # Sets the number of values held in each buffer.
         self.CargoYawBuff = Buffer(8)
         self.CargoPitchBuff = Buffer(8)
         self.GoalYawBuff = Buffer(5)
-        self.allianceColor = self.driverstation.getAlliance()
+
+        self.driverstation = DriverStation
 
         self.deactivateDriverMode()
 
@@ -73,9 +73,6 @@ class FROGVision:
     def deactivateDriverMode(self):
         self.CARGOcam.setDriverMode(False)
 
-    def getAllianceColor(self):
-        return self.allianceColor
-
     def getCurrentCargoPipeline(self):
         return self.CARGOcam.getPipelineIndex()
 
@@ -99,12 +96,32 @@ class FROGVision:
         return self.filteredCargoPitch
 
     @feedback()
+    def getFilteredCargoX(self):
+        if yaw := self.getFilteredCargoYaw():
+            return yaw / LC_X_div
+
+    @feedback()
+    def getFilteredCargoY(self):
+        if pitch := self.getFilteredCargoPitch():
+            return pitch / LC_Y_div
+
+    @feedback()
     def getFilteredGoalYaw(self):
         return self.filteredGoalYaw
 
     @feedback()
     def getFilteredGoalPitch(self):
         return self.filteredGoalPitch
+
+    @feedback()
+    def getFilteredGoalX(self):
+        if self.getFilteredGoalYaw():
+            return self.getFilteredGoalYaw() / PI_X_div
+
+    @feedback()
+    def getFilteredGoalY(self):
+        if self.getFilteredGoalPitch():
+            return self.getFilteredGoalPitch() / PI_Y_div
 
     @feedback()
     def getRangeInches(self):
@@ -153,18 +170,27 @@ class FROGVision:
         self.filteredGoalYaw = None
         self.filteredGoalPitch = None
 
+    @feedback(key='Alliance Color')
+    def getAllianceColor(self):
+        #0 is red, 1 is blue
+        return self.driverstation.getAlliance().value
+
     def setCargoAllianceColor(self):
-        self.CARGOcam.setPipelineIndex(self.allianceColor + 1)
+        self.CARGOcam.setPipelineIndex(self.allianceColor.value)
 
     def setCargoBlue(self):
-        self.CARGOcam.setPipelineIndex(2)
+        self.CARGOcam.setPipelineIndex(1)
 
     def setCargoRed(self):
-        self.CARGOcam.setPipelineIndex(1)
+        self.CARGOcam.setPipelineIndex(0)
+
+    def setup(self):
+        self.allianceColor = self.driverstation.getAlliance()
+        self.setCargoAllianceColor()
 
     @feedback(key="Alliance Cargo")
     def targetingAllianceCargo(self):
-        return self.getCurrentCargoPipeline() == self.allianceColor.value + 1
+        return self.getCurrentCargoPipeline() == self.allianceColor.value
 
     def updateCargoFilters(self):
         self.filteredCargoYaw = self.CargoXFilter.calculate(
