@@ -1,4 +1,11 @@
-from ctre import TalonFX, LimitSwitchSource, LimitSwitchNormal, StatusFrameEnhanced, SensorInitializationStrategy, NeutralMode
+from ctre import (
+    TalonFX,
+    LimitSwitchSource,
+    LimitSwitchNormal,
+    StatusFrameEnhanced,
+    SensorInitializationStrategy,
+    NeutralMode,
+)
 from wpilib import Solenoid
 from magicbot import tunable, feedback
 from components.sensors import FROGGyro
@@ -22,7 +29,6 @@ class FROGLift:
     # stage2tilt: Solenoid  # arm 2 tilt
     # stage3tilt: Solenoid  # arm 3 tilt
     # stage3release: Solenoid  # pin release
-    
     # gyro: FROGGyro
 
     stage1ExtendSpeed = tunable(0.6)
@@ -45,7 +51,7 @@ class FROGLift:
             StatusFrameEnhanced.Status_1_General, 250
         )
         self.stage1extend.setNeutralMode(NeutralMode.Brake)
-        
+
         # self.stage2extend.setInverted(True)
         # self.stage2extend.setSensorPhase(True)
         # self.stage2extend.configForwardLimitSwitchSource(*limitSwitchConfig)
@@ -111,7 +117,7 @@ class FROGLift:
 
     # def deactivateClaw(self):
     #     self.stage1claw.set(False)
-    
+
     @feedback
     def getStage1ExtendPosition(self):
         return self.stage1extend.getSelectedSensorPosition()
@@ -119,7 +125,7 @@ class FROGLift:
     # @feedback
     # def getStage1TiltPosition(self):
     #     return self.stage1tilt.getSelectedSensorPosition()
-    
+
     # @feedback
     # def getStage2ExtendPosition(self):
     #     return self.stage2extend.getSelectedSensorPosition()
@@ -131,6 +137,6 @@ class FROGLift:
     # @feedback
     # def getGyroRoll(self):
     #     return self.gyro.getRoll()
-    
+
     def execute(self):
         pass
