@@ -33,7 +33,7 @@ POSITION_MODE = ControlMode.Position
 
 
 
-kMaxFeetPerSec = 8  # taken from SDS specs for MK4i-L2
+kMaxFeetPerSec = 10  # taken from SDS specs for MK4i-L2
 # kMaxFeetPerSec = 18 # taken from SDS specks for MK4-L3
 kMaxMetersPerSec = kMaxFeetPerSec * 0.3038
 # how quickly to rotate the robot
