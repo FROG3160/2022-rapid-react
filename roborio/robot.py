@@ -117,10 +117,10 @@ class FROGbot(magicbot.MagicRobot):
             -trackwidth / 2,
         )
 
-        self.swerveFrontLeft_steerOffset = 21.796875  # 18.5449219 #13.008
-        self.swerveFrontRight_steerOffset = 177.1875  # 174.023438 #171.914
-        self.swerveBackLeft_steerOffset = 23.0273438  # 22.764
-        self.swerveBackRight_steerOffset = -43.41797  # -43.242
+        self.swerveFrontLeft_steerOffset = 26.807  # 21.796875  # 18.5449219 #13.008
+        self.swerveFrontRight_steerOffset = 178.0664  # 177.1875  # 174.023438 #171.914
+        self.swerveBackLeft_steerOffset = 31.9921875  # 23.0273438  # 22.764
+        self.swerveBackRight_steerOffset = -43.33008  # -43.41797  # -43.242
 
         # flywheel motors
         self.lowerFlywheel_motor = WPI_TalonFX(41)
@@ -277,15 +277,17 @@ class FROGbot(magicbot.MagicRobot):
             and not self.firecontrol.autoIntake
         ):
             if not self.firecontrol.is_executing:
-                self.firecontrol.next_state("waitForBall")
+                self.firecontrol.next_state_now("grab")
             self.firecontrol.engage()
 
         if self.gunnerControl.getRightTriggerAxis() > 0.5:
             self.firecontrol.next_state_now("waitForFlywheel")
+            self.firecontrol.flywheel_speed = 10500
             self.firecontrol.fireCommanded = True
             self.firecontrol.engage()
         else:
             self.firecontrol.fireCommanded = False
+            self.firecontrol.flywheel_speed = 0
 
         if self.firecontrol.autoIntake or self.firecontrol.autoFire:
             self.firecontrol.engage()
@@ -372,7 +374,6 @@ class FROGbot(magicbot.MagicRobot):
             # self.tOrig = self.getRotationPID(target)
             self.vT = -targetX * self.rotationFactor
             # self.vT = -math.copysign(abs(targetX**3), targetX)
-            print("Twist: ", self.vT)
         else:
             new_twist = joystickTwistDeadband(
                 self.driveStick.getFieldRotation()

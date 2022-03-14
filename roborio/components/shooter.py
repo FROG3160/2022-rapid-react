@@ -207,6 +207,9 @@ class FROGShooter:
     def dropLaunch(self):
         self.launch.set(False)
 
+    def getLaunchRaised(self):
+        self.launch.get()
+
     @feedback()
     def isReady(self):
         self.lowerFlywheel.tolerance = self.flywheel_tolerance
@@ -250,7 +253,7 @@ class ShooterControl(StateMachine):
     color: FROGColor
 
     flywheel_speed = tunable(0)
-    flywheel_trim = tunable(1.0)
+    flywheel_trim = tunable(0.9)
     trimIncrement = tunable(0.01)
     target_tolerance = tunable(5.0)
 
@@ -268,13 +271,18 @@ class ShooterControl(StateMachine):
         if self.isInRange():
             self.next_state("grab")
 
-    @timed_state(duration=1, next_state="retrieve")
+    @timed_state(duration=0.25, next_state="retrieve")
     def grab(self, initial_call):
         if initial_call:
-            # extend arms and grab ball
+            if self.shooter.getLaunchRaised is True and self.getBallColor is not None:
+                self.shooter.dropLaunch()
+                self.next_state('holdBall')
+            elif self.shooter.getLaunchRaised() is False:
+                self.shooter.raiseLaunch()
+                # extend arms and grab ball
             self.intake.extendGrabber()
 
-    @timed_state(duration=1, next_state="checkBallColor")
+    @timed_state(duration=0.5, next_state="checkBallColor")
     def retrieve(self, initial_call):
         # pull ball in while dropping launch
         if initial_call:
