@@ -3,7 +3,7 @@ from ctre.led import CANdle
 from ctre.led import LEDStripType
 from ctre.led import RainbowAnimation, TwinkleAnimation, ColorFlowAnimation, FireAnimation
 
-NUM_LEDS = 80
+NUM_LEDS = 120
 RAINBOW = RainbowAnimation(1, 0.9, NUM_LEDS)
 TWINKLE = TwinkleAnimation(0, 225, 0 , 225, 0.5, NUM_LEDS)
 COLORFLOWFOWARD = ColorFlowAnimation(125,235,0,0,0.5,NUM_LEDS,  ColorFlowAnimation.Direction (0))

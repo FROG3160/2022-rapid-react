@@ -37,7 +37,15 @@ class FROGGyro:
 
     def getRadiansCCW(self):
         return math.radians(-self.gyro.getYaw())
+        
+    @feedback()
+    def getCompass(self):
+        return self.gyro.getCompassHeading()
 
+    @feedback()
+    def getAngleAdjustment(self):
+        return self.gyro.getAngleAdjustment()
+        
 class FROGdar:
     canifier: CANifier
 
