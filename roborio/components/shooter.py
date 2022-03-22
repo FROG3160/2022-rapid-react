@@ -8,16 +8,16 @@ from ctre import (
 )
 from magicbot import feedback, state, timed_state
 from magicbot.state_machine import StateMachine
-from components.common import TalonPID
-from components.sensors import FROGdar, FROGsonic, FROGColor
+from components.common import TalonPID, Vector2
+from components.sensors import FROGsonic, FROGColor
 from components.vision import FROGVision
 from magicbot import tunable
-
+from logging import Logger
 
 # TODO Find out the Min/Max of the velocity and the tolerence for the Flywheel
 FLYWHEEL_MODE = ControlMode.Velocity
-LOWER_FLYWHEEL_PID = TalonPID(0, p=0, i=0, d=0, f=0.0473)
-UPPER_FLYWHEEL_PID = TalonPID(0, p=0, i=0, d=0, f=0.04655)
+LOWER_FLYWHEEL_PID = TalonPID(0, p=0, i=0, d=0, f=0.04752)
+UPPER_FLYWHEEL_PID = TalonPID(0, p=0, i=0, d=0, f=0.047)
 FLYWHEEL_VELOCITY = 0
 FLYWHEEL_MAX_VEL = 22000  # Falcon ()
 FLYWHEEL_MAX_ACCEL = FLYWHEEL_MAX_VEL / 50
@@ -52,8 +52,8 @@ class Flywheel:
     def isReady(self):
         return (
             abs(self.getVelocity() - self.getCommandedVelocity())
-            <= self.tolerance * self.getCommandedVelocity() and
-            self.getCommandedVelocity() > 0
+            <= self.tolerance * self.getCommandedVelocity()
+            and self.getCommandedVelocity() > 0
         )
 
     # read current encoder velocity
@@ -141,7 +141,7 @@ class FROGShooter:
     lowerFlywheel: Flywheel
     upperFlywheel: Flywheel
     launch: Solenoid
-    flywheel_tolerance = tunable(0.03)
+    flywheel_tolerance = tunable(0.075)
 
     def __init__(self):
         self._enable = False
@@ -256,12 +256,14 @@ class ShooterControl(StateMachine):
     flywheel_trim = tunable(0.9)
     trimIncrement = tunable(0.01)
     target_tolerance = tunable(5.0)
+    logger: Logger
 
     def __init__(self):
         self.autoIntake = True
         self.autoFire = True
         self.ballColor = None
         self.driverstation = DriverStation
+        self.targetAzimuth = None
 
     @state(first=True)
     def waitForBall(self, initial_call):
@@ -274,9 +276,12 @@ class ShooterControl(StateMachine):
     @timed_state(duration=0.25, next_state="retrieve")
     def grab(self, initial_call):
         if initial_call:
-            if self.shooter.getLaunchRaised is True and self.getBallColor is not None:
+            if (
+                self.shooter.getLaunchRaised is True
+                and self.getBallColor is not None
+            ):
                 self.shooter.dropLaunch()
-                self.next_state('holdBall')
+                self.next_state("holdBall")
             elif self.shooter.getLaunchRaised() is False:
                 self.shooter.raiseLaunch()
                 # extend arms and grab ball
@@ -290,7 +295,7 @@ class ShooterControl(StateMachine):
             self.shooter.dropLaunch()
 
     @state()
-    def checkBallColor(self): 
+    def checkBallColor(self):
         self.ballColor = self.getBallColor()
         if self.ballColor is not None:
             self.next_state("holdBall")
@@ -335,6 +340,11 @@ class ShooterControl(StateMachine):
         if initial_call:
             # raise launch, self.intake.grab resets
             self.shooter.raiseLaunch()
+            self.logger.info(
+                "Shot fired -- flywheel speed: %s, range: %s",
+                self.shooter._flywheel_speeds,
+                self.vision.getRangeInches()
+            )
 
     @state(must_finish=True)
     def release(self):
@@ -352,6 +362,11 @@ class ShooterControl(StateMachine):
             return abs(yaw) < self.target_tolerance
 
     @feedback()
+    def isAtAzimuth(self):
+        if self.targetAzimuth:
+            return abs(self.gyro.getAngle() - self.targetAzimuth) < self.target_tolerance 
+
+    @feedback()
     def getBallColor(self):
         # only return a color if a ball is in position
         if self.getBallInPosition():
@@ -362,10 +377,15 @@ class ShooterControl(StateMachine):
     def getBallInPosition(self):
         return self.color.getProximity() > PROXIMITY_THRESHOLD
 
-    @feedback()
-    def calculateFlywheelSpeed(self):
-        if range := self.vision.getRangeInches():
-            return (16.908 * range + 9282) * self.flywheel_trim
+    def calculateFlywheelSpeed(self, range=None):
+        calc_speed = 0
+        if not range:
+            if range := self.vision.getRangeInches():
+                calc_speed = (16.908 * range + 9282)
+        else:
+            calc_speed = (16.908 * range + 9282)
+        if calc_speed:
+            return calc_speed * self.flywheel_trim
         else:
             return 0
 
@@ -386,3 +406,90 @@ class ShooterControl(StateMachine):
 
     def commandToFire(self, mode):
         self.fireCommanded = mode
+
+    def calcMovingShot(self, vX, vY, target_range, target_azimuth):
+        print("--PARAMS--", vX, vY, target_azimuth)
+        # TODO: calculate time of flight from range
+        # and flywheel speed?
+        tof = range / 200  # assuming 200 inches in one second
+
+        vC = Vector2(vX * tof, vY * tof)
+        vT = Vector2.from_polar((target_range, target_azimuth))
+
+        vS = vT - vC
+        # print(sV.as_polar())
+        # return sV.as_polar()
+
+        return vS.to_polar()
+
+        # if vX == 0:
+        #     # can't divide by 0
+        #     chassisMove = math.copysign(math.pi/2, vY)
+        # else:
+        #     chassisMove = math.atan(vY/vX)
+        # if vX < 0 and vY < 0:
+        #     chassisMove = math.radians(180) - chassisMove
+        # elif vX < 0 and vY > 0:
+        #     chassisMove = math.radians(180) + chassisMove
+        # if chassisMove == 0:
+        #     if vX < 0:
+        #         chassisMove = math.pi
+        #     else:
+        #         chassisMove = 0
+        # print("Chassis Move Direction: ", math.degrees(chassisMove))
+
+        # #angleB = math.copysign(chassisMove - math.radians(heading), -heading
+        # angleB = math.pi - chassisMove - math.radians(heading)
+        # # if heading > -90 and heading < 90:
+        # #     angleB = -angleB
+
+        # print("Angle B: ", math.degrees(angleB))
+        # sideA = math.sqrt(vX**2 + vY**2)
+        # sideC = range
+        # sideB = math.sqrt(sideA**2 + sideC**2 - (2 * sideA * sideC * math.cos(angleB)))
+        # #sin(angleA)/sideA = (sin(angleB) / sideB)
+        # angleA = math.degrees(math.asin((math.sin(angleB) / sideB) * sideA))
+        # print('Angle offset: {}, calculated range: {}'.format(angleA, sideB))
+
+
+if __name__ == "__main__":
+
+    s = ShooterControl()
+
+    print("----------------CALCULATIONS")
+    print("\n=====Quadrant 1")
+    s.calcMovingShot(-36, 0, 200, -135)
+    s.calcMovingShot(36, 0, 200, -135)
+    s.calcMovingShot(0, -36, 200, -135)
+    s.calcMovingShot(0, 36, 200, -135)
+    s.calcMovingShot(36, -36, 200, -135)
+    s.calcMovingShot(-36, 36, 200, -135)
+    s.calcMovingShot(-36, -36, 200, -135)
+    s.calcMovingShot(36, 36, 200, -135)
+    print("\n=====Quadrant 2")
+    s.calcMovingShot(-36, 0, 200, -45)
+    s.calcMovingShot(36, 0, 200, -45)
+    s.calcMovingShot(0, -36, 200, -45)
+    s.calcMovingShot(0, 36, 200, -45)
+    s.calcMovingShot(36, -36, 200, -45)
+    s.calcMovingShot(-36, 36, 200, -45)
+    s.calcMovingShot(-36, -36, 200, -45)
+    s.calcMovingShot(36, 36, 200, -45)
+    print("\n=====Quadrant 3")
+    s.calcMovingShot(-36, 0, 200, 45)
+    s.calcMovingShot(36, 0, 200, 45)
+    s.calcMovingShot(0, -36, 200, 45)
+    s.calcMovingShot(0, 36, 200, 45)
+    s.calcMovingShot(-36, -36, 200, 45)
+    s.calcMovingShot(36, 36, 200, 45)
+    s.calcMovingShot(-36, 36, 200, 45)
+    s.calcMovingShot(36, -36, 200, 45)
+    print("\n=====Quadrant 4")
+    s.calcMovingShot(-36, 0, 200, 135)
+    s.calcMovingShot(36, 0, 200, 135)
+    s.calcMovingShot(0, -36, 200, 135)
+    s.calcMovingShot(0, 36, 200, 135)
+    s.calcMovingShot(36, -36, 200, 135)
+    s.calcMovingShot(-36, 36, 200, 135)
+    s.calcMovingShot(-36, -36, 200, 135)
+    s.calcMovingShot(36, 36, 200, 135)
