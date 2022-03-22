@@ -4,6 +4,42 @@ from wpimath.kinematics import SwerveModuleState
 from wpimath.geometry import Rotation2d
 
 
+class Vector2():
+
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
+    def from_polar(r, theta):
+        x = r * math.cos(math.radians(theta))
+        y = r * math.sin(math.radians(theta))
+        return Vector2(x, y)
+
+    def to_polar(self):
+        r = (self.x**2 + self.y**2) ** .5
+        theta = math.degrees(math.atan2(self.y, self.x))
+        return r, theta
+
+    # specifying overloaded methods for mathematical operations
+    # other possible operations are detailed here:
+    # https://docs.python.org/3/reference/datamodel.html#emulating-numeric-types
+    def __add__(self, vector):
+        return Vector2(self.x + vector.x, self.y + vector.y)
+
+    def __sub__(self, vector):
+        return Vector2(self.x - vector.x, self.y - vector.y)
+
+    def __neg__(self):
+        return Vector2(-self.x, -self.y)
+
+    def __repr__(self):
+        return "{} {}, polar: {}".format(
+            self.__class__,
+            ("{:.3f}".format(self.x), "{:.3f}".format(self.y)),
+            ("{:.3f}, {:.3f}".format(*self.to_polar()))
+        )
+
+
 class Buffer(deque):
     def __init__(self, size: int, validLength: int = 1):
         """Constructor for Buffer
