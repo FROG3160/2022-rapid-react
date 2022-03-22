@@ -13,8 +13,9 @@ from ctre import (
     BaseTalonPIDSetConfiguration,
     StatusFrameEnhanced,
 )
+from wpimath.estimator import SwerveDrive4PoseEstimator
 from wpilib import Field2d
-from wpimath.geometry import Translation2d, Rotation2d
+from wpimath.geometry import Translation2d, Rotation2d, Pose2d
 from wpimath.kinematics import (
     SwerveDrive4Kinematics,
     SwerveDrive4Odometry,
@@ -24,13 +25,12 @@ from wpimath.kinematics import (
 import math
 from magicbot import feedback, tunable
 from .sensors import FROGGyro
-from .common import DriveUnit
+from .common import DriveUnit, Rescale
 
 
 # Motor Control modes
 VELOCITY_MODE = ControlMode.Velocity
 POSITION_MODE = ControlMode.Position
-
 
 
 kMaxFeetPerSec = 10  # taken from SDS specs for MK4i-L2
@@ -332,6 +332,9 @@ class SwerveChassis:
     linear_offset = tunable(0.09)
     rotation_offset = tunable(0.17)
 
+    linearRescale = Rescale((0.0, 1.0), (0, 1 - 0.09))
+    rotationRescale = Rescale((0.0, 1.0), (0.0, 1 - 0.17))
+
     def __init__(self):
         self.enabled = False
         self.speeds = ChassisSpeeds(0, 0, 0)
@@ -353,34 +356,44 @@ class SwerveChassis:
         # takes values from the joystick and translates it
         # into chassis movement
         if vX:
-            vX += math.copysign(self.linear_offset, vX)
+            vX = math.copysign(
+                self.linearRescale(abs(vX)) + self.linear_offset, vX
+            )
         if vY:
-            vY += math.copysign(self.linear_offset, vY)
+            vY = math.copysign(
+                self.linearRescale(abs(vY)) + self.linear_offset, vY
+            )
         if vT:
-            vT += math.copysign(self.rotation_offset * vT, vT)
+            vT = math.copysign(
+                self.rotationRescale(abs(vT)) + self.rotation_offset, vT
+            )
 
         self.speeds = ChassisSpeeds(
-            vX * kMaxMetersPerSec,
-            vY * kMaxMetersPerSec,
-            vT * kMaxRadiansPerSec
+            vX * kMaxMetersPerSec, vY * kMaxMetersPerSec, vT * kMaxRadiansPerSec
         )
 
     def field_oriented_drive(self, vX, vY, vT):
         # takes values from the joystick and translates it
         # into chassis movement
         if vX:
-            vX += math.copysign(self.linear_offset, vX)
+            vX = math.copysign(
+                self.linearRescale(abs(vX)) + self.linear_offset, vX
+            )
         if vY:
-            vY += math.copysign(self.linear_offset, vY)
+            vY = math.copysign(
+                self.linearRescale(abs(vY)) + self.linear_offset, vY
+            )
         if vT:
-            vT += math.copysign(self.rotation_offset * vT, vT)
-   
+            vT = math.copysign(
+                self.rotationRescale(abs(vT)) + self.rotation_offset, vT
+            )
+
         self.speeds = ChassisSpeeds.fromFieldRelativeSpeeds(
             vX * kMaxMetersPerSec,
             vY * kMaxMetersPerSec,
             vT * kMaxRadiansPerSec,
-            Rotation2d.fromDegrees(-self.gyro.getAngle()),
-         )
+            Rotation2d.fromDegrees(self.gyro.getYaw()),
+        )
 
     def enable(self):
         self.enabled = True
@@ -403,6 +416,18 @@ class SwerveChassis:
     @feedback
     def getCurrentRotationDPS(self):
         return self.current_speeds.omega_dps
+
+    @feedback()
+    def getOdometryX(self):
+        return self.odometry.getPose().X()
+
+    @feedback()
+    def getOdometryY(self):
+        return self.odometry.getPose().Y()
+
+    @feedback()
+    def getOdometryT(self):
+        return self.odometry.getPose().rotation().degrees()
 
     def resetRemoteEncoders(self):
         for module in self.modules:
@@ -436,9 +461,14 @@ class SwerveChassis:
             # each SwerveModule in the same order we use here.
             *[m.location for m in self.modules]
         )
+        # self.estimator = SwerveDrive4PoseEstimator(
+        #     Rotation2d(),
+        #     Pose2d(0, 0, Rotation2d(0)),
+        #     self.kin
 
+        # )
         self.odometry = SwerveDrive4Odometry(
-            self.kinematics, Rotation2d.fromDegrees(self.gyro.getAngle())
+            self.kinematics, Rotation2d.fromDegrees(self.gyro.getYaw())
         )
         self.gyro.resetGyro()
 
@@ -469,7 +499,7 @@ class SwerveChassis:
             self.setCurrentSpeeds()
             # updating odometry to keep track of position and angle
             self.odometry.update(
-                Rotation2d(self.gyro.getAngle()), *self.current_states
+                Rotation2d(self.gyro.getYaw()), *self.current_states
             )
             self.field.setRobotPose(self.odometry.getPose())
 
