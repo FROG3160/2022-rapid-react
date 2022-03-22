@@ -499,7 +499,7 @@ class SwerveChassis:
             self.setCurrentSpeeds()
             # updating odometry to keep track of position and angle
             self.odometry.update(
-                Rotation2d(self.gyro.getYaw()), *self.current_states
+                Rotation2d.fromDegrees((self.gyro.getYaw())), *self.current_states
             )
             self.field.setRobotPose(self.odometry.getPose())
 
