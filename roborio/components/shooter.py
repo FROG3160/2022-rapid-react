@@ -270,7 +270,10 @@ class ShooterControl(StateMachine):
         if initial_call:
             self.reset_pneumatics()
 
-        if self.isInRange():
+        if self.getBallInPosition():
+            self.shooter.dropLaunch()
+            self.next_state("holdBall")
+        elif self.isInRange():
             self.next_state("grab")
 
     @timed_state(duration=0.25, next_state="retrieve")
@@ -300,7 +303,7 @@ class ShooterControl(StateMachine):
         if self.ballColor is not None:
             self.next_state("holdBall")
             # else:
-            #     self.next_state("release")
+            #     self.next_state("release")ba
         else:
             self.next_state("release")
 
@@ -327,9 +330,9 @@ class ShooterControl(StateMachine):
 
         if not flyspeed == 0:
             if self.shooter.isReady() and self.fireCommanded:
-                self.next_state_now("waitToFire")
+                self.next_state_now("fire")
             elif self.shooter.isReady() and self.isOnTarget():
-                self.next_state("waitToFire")
+                self.next_state("fire")
 
     @timed_state(duration=0.25, must_finish=True, next_state="fire")
     def waitToFire(self):
