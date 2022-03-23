@@ -37,7 +37,7 @@ class FROGGyro:
     @feedback()
     def getOffsetYaw(self):
         chassisYaw = self.gyro.getYaw()
-        fieldYaw = Rotation2d(chassisYaw + self.offset)
+        fieldYaw = Rotation2d.fromDegrees(chassisYaw + self.offset)
         return math.degrees(math.atan2(fieldYaw.sin(), fieldYaw.cos()))
 
     def resetGyro(self):
