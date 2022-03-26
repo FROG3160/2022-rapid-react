@@ -330,7 +330,7 @@ class SwerveChassis:
     field: Field2d
 
     linear_offset = tunable(0.09)
-    rotation_offset = tunable(0.17)
+    rotation_offset = tunable(0.07)
 
     linearRescale = Rescale((0.0, 1.0), (0, 1 - 0.09))
     rotationRescale = Rescale((0.0, 1.0), (0.0, 1 - 0.17))
