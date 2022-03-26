@@ -1,28 +1,45 @@
-# To adjust targeting settings within Photon Vision, go to 10.31.60.3:5800 in browser while on robot network.
+# To adjust targeting settings within Photon Vision, go to 10.31.60.3:5800
+# in browser while on robot network.
 # Expecting 15-20 fps with cargo tracking and 50-75 fps with goal tracking.
 # Cargo cam resolution is 320x240. Goal cam is resolution is 640x480.
 
 import photonvision
-from .common import Buffer
+from photonvision import PhotonUtils
+from components.common import Buffer
 from wpilib import DriverStation
-from magicbot import feedback
+from magicbot import feedback, tunable
+from wpimath.filter import MedianFilter
+import math
 
 # Values by which the the results are divided to give an output of -1 to 1.
-# LifeCam FOV is H62.8 x V37.9. Yaw is -31.4 to 31.4 degrees. Pitch is -18.9 to 18.9 degrees.
+# LifeCam FOV is H62.8 x V37.9. Yaw is -31.4 to 31.4 degrees.
+#   Pitch is -18.9 to 18.9 degrees.
 # PiCam horizontal FOV is 53.5. Yaw is -26.75 to 26.75 degrees.
-LC_X_div = 31.4
-LC_Y_div = 18.9
-PI_X_div = 26.7
+LC_X_div = 62.8 / 2
+LC_Y_div = 37.9 / 2
+PI_X_div = 53.5 / 2
+PI_Y_div = 41.41 / 2
 
-kRed = DriverStation.Alliance.kRed
-kBlue = DriverStation.Alliance.kBlue
-kInvalid = DriverStation.Alliance.kInvalid
+FILTER_RESET_COUNT = 5
+FILTER_SIZE = 12  # 12 samples at 20 ms each sample = 240ms of samples
+
+TARGET_HEIGHT_METERS = 104 * 0.0254  # 8ft. 8in.  #TODO: Confirm this value
+CAMERA_HEIGHT_METERS = 18.3 * 0.0254  # to meters
+CAMERA_PITCH_RADIANS = math.radians(26.69)  # 26.69 degrees
+
+kRed = DriverStation.Alliance.kRed  # 0
+kBlue = DriverStation.Alliance.kBlue  # 1
+kInvalid = DriverStation.Alliance.kInvalid  # 2
 
 
 class FROGVision:
+
+    goal_offset = tunable(4.0)
+
     def __init__(self):
 
-        # Sets varible to specifed camera. Must match camera name on photon vision web interface.
+        # Sets varible to specifed camera. Must match camera name
+        # on photon vision web interface.
         self.CARGOcam = photonvision.PhotonCamera("CargoCam")
         self.Goalcam = photonvision.PhotonCamera("TargetPiCam")
 
@@ -30,75 +47,196 @@ class FROGVision:
         self.CargoYawBuff = Buffer(8)
         self.CargoPitchBuff = Buffer(8)
         self.GoalYawBuff = Buffer(5)
-        self.allianceColor = kInvalid
 
-    def setup(self):
+        self.driverstation = DriverStation
 
-        # Switches to specified pipeline depending on alliance color.
-        # 2 is Blue Cargo, 1 is Red Cargo, and -1 is Driver Mode.
+        self.deactivateDriverMode()
 
-        if self.allianceColor == kBlue:
-            self.CARGOcam.setPipelineIndex(2)
+        self.CargoXFilter = MedianFilter(FILTER_SIZE)
+        self.GoalXFilter = MedianFilter(FILTER_SIZE)
+        self.CargoYFilter = MedianFilter(FILTER_SIZE)
+        self.GoalYFilter = MedianFilter(FILTER_SIZE)
 
-        elif self.allianceColor == kRed:
-            self.CARGOcam.setPipelineIndex(1)
+        self.hasGoalTargets = False
+        self.hasCargoTargets = False
+        self.filterGoalResetCount = 0
+        self.filterCargoResetCount = 0
 
-        else:
-            self.CARGOcam.setDriverMode(True)
+        self.filteredCargoYaw = None
+        self.filteredCargoPitch = None
+        self.filteredGoalYaw = None
+        self.filteredGoalPitch = None
 
-    def execute(self):
+    def activateDriverMode(self):
+        self.CARGOcam.setDriverMode(True)
 
-        self.getAllianceColor()
-        # Grabs the latest results from the Cameras and then get the best target.
-        # Best target is chosen based off of the parameters on the photon vision web interface.
-        self.CargoResults = self.CARGOcam.getLatestResult()
-        self.CargoTarget = self.CargoResults.getBestTarget()
+    def deactivateDriverMode(self):
+        self.CARGOcam.setDriverMode(False)
 
-        self.GoalResults = self.Goalcam.getLatestResult()
-        self.GoalTarget = self.GoalResults.getBestTarget()
-
-        # Adds the most recent result to the buffers.
-        self.CargoYawBuff.append(self.CargoTarget.getYaw())
-        self.CargoPitchBuff.append(self.CargoTarget.getPitch())
-        self.GoalYawBuff.append(self.GoalTarget.getYaw())
-
-    def CurrentCargoPipeline(self):
+    def getCurrentCargoPipeline(self):
         return self.CARGOcam.getPipelineIndex()
 
     # Yaw is left- and right+ degrees with center being 0
     # Values are divided so as to make the final values between -1 and 1
-    def getGoalX(self):
-        return self.GoalTarget.getYaw() / PI_X_div
-
-    def getGoalXAverage(self):
-        return self.GoalYawBuff.average() / PI_X_div
-
     def getCargoX(self):
-        return self.CargoTarget.getYaw() / LC_X_div
+        if target := self.CargoTarget.getYaw():
+            return target / LC_X_div
 
+    @feedback(key="Cargo X")
     def getCargoXAverage(self):
-        return self.CargoYawBuff.average() / LC_X_div
+        if target := self.CargoYawBuff.average():
+            return target / LC_X_div
+
+    @feedback()
+    def getFilteredCargoYaw(self):
+        return self.filteredCargoYaw
+
+    @feedback()
+    def getFilteredCargoPitch(self):
+        return self.filteredCargoPitch
+
+    @feedback()
+    def getFilteredCargoX(self):
+        if yaw := self.getFilteredCargoYaw():
+            return yaw / LC_X_div
+
+    @feedback()
+    def getFilteredCargoY(self):
+        if pitch := self.getFilteredCargoPitch():
+            return pitch / LC_Y_div
+
+    @feedback()
+    def getFilteredGoalYaw(self):
+        return self.filteredGoalYaw
+
+    @feedback()
+    def getFilteredGoalPitch(self):
+        return self.filteredGoalPitch
+
+    @feedback()
+    def getFilteredGoalX(self):
+        if self.getFilteredGoalYaw():
+            return self.getFilteredGoalYaw() / PI_X_div
+
+    @feedback()
+    def getFilteredGoalY(self):
+        if self.getFilteredGoalPitch():
+            return self.getFilteredGoalPitch() / PI_Y_div
+
+    @feedback()
+    def getRangeInches(self):
+        if self.filteredGoalPitch:
+            return (
+                PhotonUtils.calculateDistanceToTarget(
+                    CAMERA_HEIGHT_METERS,
+                    TARGET_HEIGHT_METERS,
+                    CAMERA_PITCH_RADIANS,
+                    math.radians(self.filteredGoalPitch),
+                )
+                * 5000
+            ) / 127
+
+    def getGoalX(self):
+        if target := self.GoalTarget.getYaw():
+            return (target / PI_X_div) + self.goal_offset
+
+    @feedback(key="Goal X")
+    def getGoalXAverage(self):
+        if target := self.GoalYawBuff.average():
+            return target / PI_X_div
 
     # Pitch is up+ and down- degrees with center being 0
     def getCargoY(self):
-        return self.CargoTarget.getPitch() / LC_Y_div
+        if target := self.CargoTarget.getPitch():
+            return target / LC_Y_div
 
+    @feedback(key="Cargo Y")
     def getCargoYAverage(self):
-        return self.CargoPitchBuff.average() / LC_Y_div
+        if target := self.CargoPitchBuff.average():
+            return target / LC_Y_div
 
-    def setCargoRed(self):
-        return self.CARGOcam.setPipelineIndex(1)
+    def getDriverMode(self):
+        self.CARGOcam.getDriverMode()
+
+    def resetCargoFilters(self):
+        self.CargoXFilter.reset()
+        self.CargoYFilter.reset()
+        self.filteredCargoYaw = None
+        self.filteredCargoPitch = None
+
+    def resetGoalFilters(self):
+        self.GoalXFilter.reset()
+        self.GoalYFilter.reset()
+        self.filteredGoalYaw = None
+        self.filteredGoalPitch = None
+
+    @feedback(key='Alliance Color')
+    def getAllianceColor(self):
+        #0 is red, 1 is blue
+        return self.driverstation.getAlliance().value
+
+    def setCargoAllianceColor(self):
+        self.CARGOcam.setPipelineIndex(self.allianceColor.value)
 
     def setCargoBlue(self):
-        return self.CARGOcam.setPipelineIndex(2)
+        self.CARGOcam.setPipelineIndex(1)
 
-    def setDriverMode(self):
-        return self.CARGOcam.setDriverMode(True)
+    def setCargoRed(self):
+        self.CARGOcam.setPipelineIndex(0)
 
-    def setAllianceColor(self, color):
-        self.allianceColor = color
-        self.setup()
+    def setup(self):
+        self.allianceColor = self.driverstation.getAlliance()
+        self.setCargoAllianceColor()
 
-    @feedback()
-    def getAllianceColor(self):
-        return self.allianceColor
+    @feedback(key="Alliance Cargo")
+    def targetingAllianceCargo(self):
+        return self.getCurrentCargoPipeline() == self.allianceColor.value
+
+    def updateCargoFilters(self):
+        self.filteredCargoYaw = self.CargoXFilter.calculate(
+            self.CargoTarget.getYaw()
+        )
+        self.filteredCargoPitch = self.CargoYFilter.calculate(
+            self.CargoTarget.getPitch()
+        )
+
+    def updateGoalFilters(self):
+        self.filteredGoalYaw = self.GoalXFilter.calculate(
+            self.GoalTarget.getYaw()
+        )
+        self.filteredGoalPitch = self.GoalYFilter.calculate(
+            self.GoalTarget.getPitch()
+        )
+
+    def execute(self):
+        # Grabs the latest results from the Cameras and then get the
+        # best target.  Best target is chosen based off of the
+        # parameters on the photon vision web interface.
+
+        self.CargoResults = self.CARGOcam.getLatestResult()
+        if self.CargoResults.hasTargets():
+            self.hasCargoTargets = True
+            self.CargoTarget = self.CargoResults.getBestTarget()
+            # Adds the most recent result to the buffers.
+            self.CargoYawBuff.append(self.CargoTarget.getYaw())
+            self.CargoPitchBuff.append(self.CargoTarget.getPitch())
+            self.updateCargoFilters()
+        else:
+            self.hasCargoTargets = False
+            self.filterCargoResetCount += 1
+            if self.filterCargoResetCount == FILTER_RESET_COUNT:
+                self.resetCargoFilters()
+                self.filterCargoResetCount = 0
+
+        self.GoalResults = self.Goalcam.getLatestResult()
+        if self.GoalResults.hasTargets():
+            self.hasGoalTargets = True
+            self.GoalTarget = self.GoalResults.getBestTarget()
+            self.GoalYawBuff.append(self.GoalTarget.getYaw())
+            self.updateGoalFilters()
+        else:
+            self.hasGoalTargets = False
+            self.filterGoalResetCount += 1
+            if self.filterGoalResetCount == FILTER_RESET_COUNT:
+                self.resetGoalFilters()
+                self.filterGoalResetCount = 0

@@ -1,13 +1,14 @@
-
 from ctre.led import CANdle
 from ctre.led import LEDStripType
 from ctre.led import RainbowAnimation, TwinkleAnimation, ColorFlowAnimation, FireAnimation
 
+FORWARD = ColorFlowAnimation.Direction.Forward
+BACKWARD = ColorFlowAnimation.Direction.Backward
 NUM_LEDS = 120
 RAINBOW = RainbowAnimation(1, 0.9, NUM_LEDS)
 TWINKLE = TwinkleAnimation(0, 225, 0 , 225, 0.5, NUM_LEDS)
-COLORFLOWFOWARD = ColorFlowAnimation(125,235,0,0,0.5,NUM_LEDS,  ColorFlowAnimation.Direction (0))
-COLORFLOWBACKWARD = ColorFlowAnimation(125,235,3,0,0.5,NUM_LEDS, ColorFlowAnimation.Direction(1))
+COLORFLOWFORWARD = ColorFlowAnimation(125,235,0,0,0.5,NUM_LEDS, FORWARD)
+COLORFLOWBACKWARD = ColorFlowAnimation(125,235,3,0,0.5,NUM_LEDS, BACKWARD)
 FIRE = FireAnimation(1,0.5,NUM_LEDS,0.7,0.3)
 
 class FROGLED():
@@ -24,7 +25,7 @@ class FROGLED():
         self.candle.setLEDs(0, 0, 255)
 
     def WhenShoot(self):
-        self.candle.animate(COLORFLOWFOWARD)
+        self.candle.animate(COLORFLOWFORWARD)
 
     def WhenDoneShooting(self):
         self.candle.animate(COLORFLOWBACKWARD)
