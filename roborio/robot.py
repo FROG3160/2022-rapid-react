@@ -25,6 +25,7 @@ from components.vision import FROGVision, LC_Y_div
 from components.common import Rescale
 from components.shooter import ShooterControl
 from components.climber import FROGLift
+from components.led import FROGLED
 
 
 # robot characteristics
@@ -139,6 +140,7 @@ class FROGbot(magicbot.MagicRobot):
         # self.lift_stage2extend = WPI_TalonFX(53)
 
         # TODO:  Add in CANdle on channel 35
+        self.led = FROGLED(35)
 
         # CANifier for LIDAR
         # self.lidar_canifier = CANifier(36)
@@ -378,10 +380,14 @@ class FROGbot(magicbot.MagicRobot):
         if self.driveStick.getRawButtonPressed(8):
             self.lift.deactivateClaw()
 
+        # determine twist/rotation
         if self.targetLock and targetX and not self.overrideTargeting:
             # self.tOrig = self.getRotationPID(target)
-            self.vT = -targetX * self.rotationFactor
-            # self.vT = -math.copysign(abs(targetX**3), targetX)
+            # * self.rotationFactor
+            self.vT = -math.copysign(abs(targetX**3), targetX) * self.rotationFactor
+        elif self.driveStick.getPOV() > -1:
+            targetAngle = -(self.driveStick.getPOV() - 180)
+            self.vT = (targetAngle - self.gyro.getYaw())/360
         else:
             new_twist = joystickTwistDeadband(
                 self.driveStick.getFieldRotation()
@@ -432,6 +438,7 @@ class FROGbot(magicbot.MagicRobot):
 
     def testPeriodic(self):
         """Called on each iteration of the control loop"""
+        self.led.ColorChangeBlue()
         pass
 
 
