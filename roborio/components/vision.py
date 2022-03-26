@@ -17,15 +17,15 @@ import math
 # PiCam horizontal FOV is 53.5. Yaw is -26.75 to 26.75 degrees.
 LC_X_div = 62.8 / 2
 LC_Y_div = 37.9 / 2
-PI_X_div = 53.5 / 2
-PI_Y_div = 41.41 / 2
+PI_X_div = 41.41 / 2  # pi is rotated 90 degrees, vertical FOV is X
+PI_Y_div = 53.5 / 2  # horizontal FOV is the Y
 
 FILTER_RESET_COUNT = 5
 FILTER_SIZE = 12  # 12 samples at 20 ms each sample = 240ms of samples
 
 TARGET_HEIGHT_METERS = 104 * 0.0254  # 8ft. 8in.  #TODO: Confirm this value
-CAMERA_HEIGHT_METERS = 18.3 * 0.0254  # to meters
-CAMERA_PITCH_RADIANS = math.radians(26.69)  # 26.69 degrees
+CAMERA_HEIGHT_METERS = 38.75 * 0.0254  # to meters
+CAMERA_PITCH_RADIANS = math.radians(30)  # 26.69 degrees
 
 kRed = DriverStation.Alliance.kRed  # 0
 kBlue = DriverStation.Alliance.kBlue  # 1
