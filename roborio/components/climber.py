@@ -31,8 +31,8 @@ class FROGLift:
     # stage3release: Solenoid  # pin release
     # gyro: FROGGyro
 
-    stage1ExtendSpeed = tunable(0.6)
-    stage1RetractSpeed = tunable(0.4)
+    stage1ExtendSpeed = tunable(1.0)
+    stage1RetractSpeed = tunable(1.0)
     # stage2speed = tunable(0.4)
     # stage1RotateForward = tunable(0.08)
     # stage1RotateBack = tunable(0.15)
