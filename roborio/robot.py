@@ -419,10 +419,7 @@ class FROGbot(magicbot.MagicRobot):
             new_twist = joystickTwistDeadband(
                 self.driveStick.getFieldRotation()
             )
-            if not new_twist == 0:
-                self.vT = math.copysign(new_twist**3, new_twist)
-            else:
-                self.vT = 0
+            self.vT = math.copysign(new_twist**3, new_twist)
 
         # determine linear velocities
         if (
