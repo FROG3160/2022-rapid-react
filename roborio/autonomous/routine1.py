@@ -214,17 +214,16 @@ class RightSideMoveShoot(AutonomousStateMachine):
 
     @timed_state(duration=2, next_state="finish")
     def waitForGoal(self):
-        self.swerveChassis.field_oriented_drive(-0.25, -0.25, 0.25)
+        self.swerveChassis.field_oriented_drive(-0.25, -0.25, 0.125)
         if self.vision.hasGoalTargets:
-            self.swerveChassis.field_oriented_drive(0, 0, 0)
+            # self.swerveChassis.field_oriented_drive(0, 0, 0)
             self.next_state_now("rotateToTarget")
 
     @state()
     def rotateToTarget(self):
-        targetX = self.vision.getFilteredGoalX()
-        if targetX:
-            self.vT = -targetX * ROTATION_FACTOR
-            self.swerveChassis.field_oriented_drive(0, 0, self.vT)
+        targetAngle = self.gyro.getYaw() - self.vision.getFilteredGoalYaw()
+        if targetAngle:
+            self.swerveChassis.field_oriented_drive(0, 0, 0, targetAngle)
         if self.firecontrol.isOnTarget():
             self.swerveChassis.field_oriented_drive(0, 0, 0)
             self.next_state("waitForFlywheel")
