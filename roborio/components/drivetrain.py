@@ -352,7 +352,7 @@ class SwerveChassis:
         for module in self.modules:
             module.disable()
 
-    def drive(self, vX, vY, vT):
+    def drive(self, vX, vY, vT, target_angle=None):
         # takes values from the joystick and translates it
         # into chassis movement
         if vX:
@@ -363,7 +363,9 @@ class SwerveChassis:
             vY = math.copysign(
                 self.linearRescale(abs(vY)) + self.linear_offset, vY
             )
-        if vT:
+        if target_angle:
+            vT = self.rotationController.calculate(self.gyro.getYaw(), target_angle)
+        elif vT:
             vT = math.copysign(
                 self.rotationRescale(abs(vT)) + self.rotation_offset, vT
             )
@@ -372,7 +374,7 @@ class SwerveChassis:
             vX * kMaxMetersPerSec, vY * kMaxMetersPerSec, vT * kMaxRadiansPerSec
         )
 
-    def field_oriented_drive(self, vX, vY, vT):
+    def field_oriented_drive(self, vX, vY, vT, target_angle=None):
         # takes values from the joystick and translates it
         # into chassis movement
         if vX:
@@ -383,7 +385,9 @@ class SwerveChassis:
             vY = math.copysign(
                 self.linearRescale(abs(vY)) + self.linear_offset, vY
             )
-        if vT:
+        if target_angle:
+            vT = self.rotationController.calculate(self.gyro.getYaw(), target_angle)
+        elif vT:
             vT = math.copysign(
                 self.rotationRescale(abs(vT)) + self.rotation_offset, vT
             )
@@ -471,6 +475,8 @@ class SwerveChassis:
             self.kinematics, Rotation2d.fromDegrees(self.gyro.getYaw())
         )
         self.gyro.resetGyro()
+        self.rotationController = PIDController(0.01, 0, 0.001)
+        self.rotationController.setTolerance(1.5)
 
     def execute(self):
         # execute is called each iteration
