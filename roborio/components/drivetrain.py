@@ -329,11 +329,11 @@ class SwerveChassis:
     gyro: FROGGyro
     field: Field2d
 
-    linear_offset = tunable(0.09)
-    rotation_offset = tunable(0.07)
+    linear_offset = tunable(0.07)
+    rotation_offset = 0 #tunable(0.07)
 
-    linearRescale = Rescale((0.0, 1.0), (0, 1 - 0.09))
-    rotationRescale = Rescale((0.0, 1.0), (0.0, 1 - 0.17))
+    linearRescale = Rescale((0.0, 1.0), (0, 1 - 0.07))
+    rotationRescale = Rescale((0.0, 1.0), (0.0, 1 - 0.07))
 
     def __init__(self):
         self.enabled = False

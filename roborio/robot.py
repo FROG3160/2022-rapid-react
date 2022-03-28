@@ -37,6 +37,9 @@ wheelbase = 21.75 / 12  # feet between wheels front to back
 kDeadzone = 0.2
 joystickAxisDeadband = Rescale((-1, 1), (-1, 1), 0.15)
 joystickTwistDeadband = Rescale((-1, 1), (-1, 1), 0.2)
+visionTwistDeadband = Rescale((-1, 1), (-0.35, 0.35))
+
+
 # visionDeadband = Rescale((-1,1), (.25, .25))
 CTRE_PCM = PneumaticsModuleType.CTREPCM
 TARGET_CARGO = 0
@@ -77,6 +80,10 @@ class FROGbot(magicbot.MagicRobot):
 
     rotationFactor = tunable(0.15)
     speedFactor = tunable(0.075)
+
+    testTwist = tunable(0.0)
+    testX = tunable(0.0)
+    testY = tunable(0.0)
 
     def allianceColor(self):
 
@@ -119,16 +126,16 @@ class FROGbot(magicbot.MagicRobot):
         )
 
         self.swerveFrontLeft_steerOffset = (
-            136.143  # 26.807  # 21.796875  # 18.5449219 #13.008
+            133.330078  # 136.143  # 26.807  # 21.796875  # 18.5449219 #13.008
         )
         self.swerveFrontRight_steerOffset = (
-            -146.602
+            -150.380859  #-146.602
         )  # 178.0664  # 177.1875  # 174.023438 #171.914
         self.swerveBackLeft_steerOffset = (
-            -0.527
+            3.95507813   # -0.527
         )  # 31.9921875  # 23.0273438  # 22.764
         self.swerveBackRight_steerOffset = (
-            -140.361
+            -150.117188  # -140.361
         )  # -43.33008  # -43.41797  # -43.242
 
         # flywheel motors
@@ -186,7 +193,8 @@ class FROGbot(magicbot.MagicRobot):
 
         self.xOrig = self.yOrig = self.tOrig = 0
 
-        self.rotationController = PIDController(0, 0, 0)
+        self.rotationController = PIDController(0.01, 0, 0.001)
+        self.rotationController.setTolerance(2.5)
         self.vX = 0
         self.vY = 0
         self.vT = 0
@@ -218,6 +226,13 @@ class FROGbot(magicbot.MagicRobot):
             self.vision.getFilteredGoalX(),
         ][self.objectTargeted]
 
+    @feedback(key="TargetYaw")
+    def getSelectedTargetYaw(self):
+        return [
+            self.vision.getFilteredCargoYaw(),
+            self.vision.getFilteredGoalYaw(),
+        ][self.objectTargeted]
+
     @feedback(key="TargetY")
     def getSelectedTargetY(self):
         return [
@@ -230,8 +245,16 @@ class FROGbot(magicbot.MagicRobot):
         return self.xOrig, self.yOrig, self.tOrig
 
     @feedback()
-    def getChassisVelocities(self):
-        return self.vX, self.vY, self.vT
+    def getVX(self):
+        return self.vX
+    
+    @feedback()
+    def getVY(self):
+        return self.vY
+
+    @feedback()
+    def getVT(self):
+        return self.vT
 
     def autonomousInit(self):
         self.swerveChassis.enable()
@@ -341,10 +364,10 @@ class FROGbot(magicbot.MagicRobot):
         # else:
         #     self.lift.stage2extend.set(0)
 
-        if self.gunnerControl.getPOV() == 0:
+        pov = self.gunnerControl.get_debounced_POV()
+        if pov == 0:
             self.firecontrol.raiseFlywheelTrim()
-
-        if self.gunnerControl.getPOV() == 180:
+        elif pov == 180:
             self.firecontrol.lowerFlywheelTrim()
 
         # allows driver to override targeting control of rotation
@@ -358,6 +381,7 @@ class FROGbot(magicbot.MagicRobot):
 
         targetX = self.getSelectedTargetX()
         targetY = self.getSelectedTargetY()
+        targetYaw = self.getSelectedTargetYaw()
 
         # ! If we are in autodrive and we have a target, use it
         # ! otherwise use manual drive
@@ -374,25 +398,34 @@ class FROGbot(magicbot.MagicRobot):
         else:
             self.autoDrive = False
 
-        if self.driveStick.getRawButtonPressed(7):
-            self.lift.activateClaw()
+        # if self.driveStick.getRawButtonPressed(7):
+        #     self.lift.activateClaw()
 
-        if self.driveStick.getRawButtonPressed(8):
-            self.lift.deactivateClaw()
+        # if self.driveStick.getRawButtonPressed(8):
+        #     self.lift.deactivateClaw()
 
         # determine twist/rotation
-        if self.targetLock and targetX and not self.overrideTargeting:
+        if self.targetLock and targetYaw and not self.overrideTargeting:
             # self.tOrig = self.getRotationPID(target)
             # * self.rotationFactor
-            self.vT = -math.copysign(abs(targetX**3), targetX) * self.rotationFactor
+            # targetX = -visionTwistDeadband(targetX)
+            # self.vT = math.copysign(targetX**2, targetX)
+            # #self.vT = -math.copysign(targetX ** self.rotationFactor, targetX)
+            new_angle = self.gyro.getYaw() - targetYaw
+            self.vT = self.rotationController.calculate(self.gyro.getYaw(), new_angle)
         elif self.driveStick.getPOV() > -1:
             targetAngle = -(self.driveStick.getPOV() - 180)
-            self.vT = (targetAngle - self.gyro.getYaw())/360
+            #angleX = visionTwistDeadband((targetAngle - self.gyro.getYaw())/360)
+            # self.vT = angleX
+            self.vT = self.rotationController.calculate(self.gyro.getYaw(), targetAngle)
         else:
             new_twist = joystickTwistDeadband(
                 self.driveStick.getFieldRotation()
             )
-            self.vT = math.copysign(new_twist**3, new_twist)
+            if not new_twist == 0:
+                self.vT = math.copysign(abs(new_twist**3) + 0.07, new_twist)
+            else:
+                self.vT = 0
 
         if (
             self.autoDrive
@@ -400,8 +433,8 @@ class FROGbot(magicbot.MagicRobot):
             and not self.overrideTargeting
             and self.objectTargeted == TARGET_CARGO
         ):
-            targetY = (targetY + 1) / 2
-            self.vX = math.copysign(
+            targetY = (targetY + 1) / 1.25
+            self.vX = -math.copysign(
                 abs(
                     (((targetY + 1) / 2) * self.speedFactor) + self.speedFactor
                 ),
@@ -439,6 +472,10 @@ class FROGbot(magicbot.MagicRobot):
     def testPeriodic(self):
         """Called on each iteration of the control loop"""
         self.led.ColorChangeBlue()
+        self.vX = self.driveStick.getFieldForward()
+        self.vY = self.driveStick.getFieldLeft()
+        self.vT = self.driveStick.getFieldRotation()
+        self.swerveChassis.field_oriented_drive(self.vX, self.vY, self.vT)
         pass
 
 
