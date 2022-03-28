@@ -6,18 +6,18 @@ from ctre import (
     NeutralMode,
     TalonFXInvertType,
 )
-from magicbot import feedback, state, timed_state
+from magicbot import feedback, state, timed_state, tunable
 from magicbot.state_machine import StateMachine
 from components.common import TalonPID, Vector2
 from components.sensors import FROGsonic, FROGColor
 from components.vision import FROGVision
-from magicbot import tunable
+from components.led import FROGLED
 from logging import Logger
 
 # TODO Find out the Min/Max of the velocity and the tolerence for the Flywheel
 FLYWHEEL_MODE = ControlMode.Velocity
-LOWER_FLYWHEEL_PID = TalonPID(0, p=0, i=0, d=0, f=0.04752)
-UPPER_FLYWHEEL_PID = TalonPID(0, p=0, i=0, d=0, f=0.047)
+LOWER_FLYWHEEL_PID = TalonPID(0, p=0, i=0, d=0, f=0.04755)
+UPPER_FLYWHEEL_PID = TalonPID(0, p=0, i=0, d=0, f=0.04700)
 FLYWHEEL_VELOCITY = 0
 FLYWHEEL_MAX_VEL = 22000  # Falcon ()
 FLYWHEEL_MAX_ACCEL = FLYWHEEL_MAX_VEL / 50
@@ -251,11 +251,12 @@ class ShooterControl(StateMachine):
     sonic: FROGsonic
     vision: FROGVision
     color: FROGColor
+    led: FROGLED
 
     flywheel_speed = tunable(0)
-    flywheel_trim = tunable(0.9)
+    flywheel_trim = tunable(1.0)
     trimIncrement = tunable(0.01)
-    target_tolerance = tunable(5.0)
+    target_tolerance = tunable(2.5)
     logger: Logger
 
     def __init__(self):
@@ -264,6 +265,9 @@ class ShooterControl(StateMachine):
         self.ballColor = None
         self.driverstation = DriverStation
         self.targetAzimuth = None
+        self.shotLowerVelocity = None
+        self.shotUpperVelocity = None
+        self.shotRange = None
 
     @state(first=True)
     def waitForBall(self, initial_call):
@@ -301,6 +305,10 @@ class ShooterControl(StateMachine):
     def checkBallColor(self):
         self.ballColor = self.getBallColor()
         if self.ballColor is not None:
+            if self.ballColor:
+                self.led.ColorChangeBlue()
+            else:
+                self.led.ColorChangeRed()
             self.next_state("holdBall")
             # else:
             #     self.next_state("release")ba
@@ -343,11 +351,26 @@ class ShooterControl(StateMachine):
         if initial_call:
             # raise launch, self.intake.grab resets
             self.shooter.raiseLaunch()
+            self.shotLowerVelocity = self.shooter.lowerFlywheel.getVelocity()
+            self.shotUpperVelocity = self.shooter.upperFlywheel.getVelocity()
+            self.shotRange = self.vision.getRangeInches()
             self.logger.info(
                 "Shot fired -- flywheel speed: %s, range: %s",
                 self.shooter._flywheel_speeds,
                 self.vision.getRangeInches()
             )
+
+    @feedback()
+    def getShotLowerVelocity(self):
+        return self.shotLowerVelocity
+
+    @feedback()
+    def getShotUpperVelocity(self):
+        return self.shotUpperVelocity
+
+    @feedback()
+    def getShotRange(self):
+        return self.shotRange
 
     @state(must_finish=True)
     def release(self):
@@ -384,19 +407,23 @@ class ShooterControl(StateMachine):
         calc_speed = 0
         if not range:
             if range := self.vision.getRangeInches():
-                calc_speed = (16.908 * range + 9282)
+                calc_speed = self.flywheelSpeedFromRange(range)
         else:
-            calc_speed = (16.908 * range + 9282)
+            calc_speed = self.flywheelSpeedFromRange(range)
         if calc_speed:
             return calc_speed * self.flywheel_trim
         else:
             return 0
+
+    def flywheelSpeedFromRange(self, range):
+        return (17.597 * range + 8481.9)
 
     def reset_pneumatics(self):
         self.intake.deactivateHold()
         self.shooter.raiseLaunch()
         self.intake.deactivateRetrieve()
         self.shooter.setFlywheelSpeeds(0)
+        self.led.Default()
 
     def raiseFlywheelTrim(self):
         self.flywheel_trim += self.trimIncrement
