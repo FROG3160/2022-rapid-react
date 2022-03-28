@@ -199,7 +199,7 @@ class FROGBoxGunner(XboxController):
             if (now - self.button_latest.get(num, 0)) > self.DEBOUNCE_PERIOD:
                 self.button_latest[num] = now
                 val = True
-        self.update_nt("button_{}".format(num), val)
+        # self.update_nt("button_{}".format(num), val)
         return val
 
     def get_debounced_POV(self):
@@ -214,5 +214,5 @@ class FROGBoxGunner(XboxController):
             self.setRumble(RIGHT_RUMBLE, 1)
         else:
             self.setRumble(RIGHT_RUMBLE, 0)
-        self.update_nt("button_pov", val)
+        # self.update_nt("button_pov", val)
         return val
