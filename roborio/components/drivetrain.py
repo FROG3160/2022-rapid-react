@@ -329,8 +329,8 @@ class SwerveChassis:
     gyro: FROGGyro
     field: Field2d
 
-    linear_offset = tunable(0.07)
-    rotation_offset = 0 #tunable(0.07)
+    linear_offset = 0.07
+    rotation_offset = 0.07 # tunable(0.07)
 
     linearRescale = Rescale((0.0, 1.0), (0, 1 - 0.07))
     rotationRescale = Rescale((0.0, 1.0), (0.0, 1 - 0.07))

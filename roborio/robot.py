@@ -420,7 +420,7 @@ class FROGbot(magicbot.MagicRobot):
                 self.driveStick.getFieldRotation()
             )
             if not new_twist == 0:
-                self.vT = math.copysign(abs(new_twist**3) + 0.07, new_twist)
+                self.vT = math.copysign(new_twist**3, new_twist)
             else:
                 self.vT = 0
 
