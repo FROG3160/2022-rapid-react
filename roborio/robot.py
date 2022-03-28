@@ -472,10 +472,6 @@ class FROGbot(magicbot.MagicRobot):
     def testPeriodic(self):
         """Called on each iteration of the control loop"""
         self.led.ColorChangeBlue()
-        self.vX = self.driveStick.getFieldForward()
-        self.vY = self.driveStick.getFieldLeft()
-        self.vT = self.driveStick.getFieldRotation()
-        self.swerveChassis.field_oriented_drive(self.vX, self.vY, self.vT)
         pass
 
 
