@@ -35,6 +35,10 @@ class FROGGyro:
         self.offset = offset
 
     @feedback()
+    def getRotationDPS(self):
+        return self.gyro.getRate()
+
+    @feedback()
     def getOffsetYaw(self):
         chassisYaw = self.gyro.getYaw()
         fieldYaw = Rotation2d.fromDegrees(chassisYaw + self.offset)
