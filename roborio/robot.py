@@ -80,10 +80,6 @@ class FROGbot(magicbot.MagicRobot):
 
     speedFactor = tunable(0.075)
 
-    testTwist = tunable(0.0)
-    testX = tunable(0.0)
-    testY = tunable(0.0)
-
     def allianceColor(self):
 
         self.driverstation.getAlliance()
@@ -404,7 +400,11 @@ class FROGbot(magicbot.MagicRobot):
 
         if self.driveStick.getTrigger():
             self.autoDrive = True
+            self.intake.extendRoller()
+            self.intake.runRoller()
         else:
+            self.intake.retractRoller()
+            self.intake.stopRoller()
             self.autoDrive = False
 
         # if self.driveStick.getRawButtonPressed(7):
