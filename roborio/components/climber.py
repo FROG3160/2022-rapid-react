@@ -9,6 +9,7 @@ from ctre import (
 from wpilib import Solenoid
 from magicbot import tunable, feedback
 from components.sensors import FROGGyro
+from components.led import FROGLED
 
 STAGE1_THRESHOLD = 534000.0
 STAGE1_TILT_THRESHOLD = 24000
@@ -24,6 +25,8 @@ class FROGLift:
     stage1extend: TalonFX
     # stage1tilt: TalonFX
     # stage2extend: TalonFX
+
+    led: FROGLED
 
     # stage1claw: Solenoid  # grabber - hook
     # stage2tilt: Solenoid  # arm 2 tilt
@@ -79,7 +82,9 @@ class FROGLift:
     def extendStage1(self):
         if not self.stage1extend.isFwdLimitSwitchClosed():
             self.stage1extend.set(self.stage1ExtendSpeed)
+            self.led.climbing()
         else:
+            self.led.Default()
             self.stage1extend.set(0)
 
     # def extendStage2(self):
@@ -97,7 +102,9 @@ class FROGLift:
     def retractStage1(self):
         if not self.stage1extend.isRevLimitSwitchClosed():
             self.stage1extend.set(-self.stage1RetractSpeed)
+            self.led.climbing()
         else:
+            self.led.Default()
             self.stage1extend.set(0)
 
     # def tiltStage1Forward(self):
