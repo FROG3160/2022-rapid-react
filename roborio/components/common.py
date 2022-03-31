@@ -15,6 +15,11 @@ class Vector2():
         y = r * math.sin(math.radians(theta))
         return Vector2(x, y)
 
+    def from_chassis_speed(x, y, yaw):
+        r = (x**2 + y**2) ** .5
+        theta = math.degrees(math.atan2(y, x)) + yaw
+        return Vector2.from_polar(r, theta)
+
     def to_polar(self):
         r = (self.x**2 + self.y**2) ** .5
         theta = math.degrees(math.atan2(self.y, self.x))
