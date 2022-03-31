@@ -41,42 +41,40 @@ class FROGGyro:
     @feedback()
     def getOffsetYaw(self):
         chassisYaw = self.gyro.getYaw()
-        fieldYaw = Rotation2d.fromDegrees(chassisYaw + self.offset)
+        fieldYaw = Rotation2d.fromDegrees(chassisYaw + self.starting_angle)
         return math.degrees(math.atan2(fieldYaw.sin(), fieldYaw.cos()))
 
     def resetGyro(self):
         # sets yaw reading to 0
+        self.setAngleAdjustment(self.starting_angle)
         self.gyro.reset()
 
     def execute(self):
         pass
 
-    def setAngle(self, angle):
+    @feedback
+    def getAngle(self):
+        return self.gyro.getAngle()
+
+    @feedback
+    def getAngleConstrained(self):
+        angle = self.getAngle()
+        return math.degrees(math.atan2(math.sin(angle), math.cos(angle)))
+
+    def setAngleAdjustment(self, angle):
         self.gyro.setAngleAdjustment(angle)
 
     @feedback()
     def getRadiansCCW(self):
         return math.radians(self.gyro.getYaw())
 
-    @feedback()
-    def getCompassHeading(self):
-        return self.gyro.getCompassHeading()
+
 
     @feedback()
     def getAngleAdjustment(self):
         return self.gyro.getAngleAdjustment()
 
-    @feedback()
-    def getPitch(self):
-        return self.gyro.getPitch()
 
-    @feedback()
-    def getRoll(self):
-        return self.gyro.getRoll()
-
-    @feedback()
-    def getAngleAdjustment(self):
-        return self.gyro.getAngleAdjustment()
         
 class FROGdar:
     canifier: CANifier

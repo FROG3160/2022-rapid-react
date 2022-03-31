@@ -167,4 +167,4 @@ class PhysicsEngine:
         # this works to update a motor in the sim GUI, but only changing the percentOutput and motorOutputLeadVoltage attributes.
         # self.simFL_drive.setIntegratedSensorVelocity(round(self.simBot.swerveFrontLeft_drive.getSelectedSensorVelocity()))
         # self.physics_controller.drive(self.robot.swerveChassis.speeds, tm_diff)
-        self.robot.gyro.setAngle(-pose.rotation().degrees())
+        self.robot.gyro.setAngleAdjustment(-pose.rotation().degrees())
