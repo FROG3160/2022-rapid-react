@@ -119,6 +119,16 @@ class Intake:
     def __init__(self):
         pass
 
+    def setup(self):
+        self.rollerMotor.configSelectedFeedbackSensor(
+            FeedbackDevice.IntegratedSensor, 0, 0
+        )
+        self.rollerMotor.setNeutralMode(NeutralMode.Coast)
+        self.rollerMotor.configClosedloopRamp(0.1)
+        self.rollerMotor.configVoltageCompSaturation(12)
+        self.rollerMotor.enableVoltageCompensation(True)
+        self.rollerMotor.setInverted(True)
+
     def activateRetrieve(self):
         self.retrieve.set(True)
 
@@ -142,6 +152,15 @@ class Intake:
 
     def retractRoller(self):
         self.rollerDeploy.set(False)
+
+    def runRoller(self):
+        self.rollerMotor.set(0.2)
+
+    def stopRoller(self):
+        self.rollerMotor.set(0)
+
+    def reverseRoller(self):
+        self.rollerMotor.set(-0.4)
 
     def execute(self):
         pass
