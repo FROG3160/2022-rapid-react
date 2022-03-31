@@ -14,6 +14,7 @@ from ctre import (
     StatusFrameEnhanced,
 )
 from wpimath.estimator import SwerveDrive4PoseEstimator
+from wpimath.controller import PIDController
 from wpilib import Field2d
 from wpimath.geometry import Translation2d, Rotation2d, Pose2d
 from wpimath.kinematics import (
@@ -330,7 +331,7 @@ class SwerveChassis:
     field: Field2d
 
     linear_offset = 0.07
-    rotation_offset = 0.07 # tunable(0.07)
+    rotation_offset = 0.07  # tunable(0.07)
 
     linearRescale = Rescale((0.0, 1.0), (0, 1 - 0.07))
     rotationRescale = Rescale((0.0, 1.0), (0.0, 1 - 0.07))
@@ -477,6 +478,7 @@ class SwerveChassis:
         self.gyro.resetGyro()
         self.rotationController = PIDController(0.01, 0, 0.001)
         self.rotationController.setTolerance(1.5)
+        self.rotationController.enableContinuousInput(-180, 180)
 
     def execute(self):
         # execute is called each iteration
