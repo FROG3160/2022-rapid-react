@@ -78,7 +78,6 @@ class FROGbot(magicbot.MagicRobot):
 
     # driverstation: DriverStation
 
-    rotationFactor = tunable(0.15)
     speedFactor = tunable(0.075)
 
     testTwist = tunable(0.0)
@@ -160,7 +159,11 @@ class FROGbot(magicbot.MagicRobot):
         # Solenoids for shooter
         self.intake_retrieve = Solenoid(CTRE_PCM, 2)
         self.intake_hold = Solenoid(CTRE_PCM, 1)
+        self.intake_rollerDeploy = Solenoid(CTRE_PCM, 3)
+        self.intake_rollerMotor = WPI_TalonFX(52)
+
         self.shooter_launch = Solenoid(CTRE_PCM, 0)
+
 
         # self.lift_stage1claw = Solenoid(CTRE_PCM, 3)  # grabber - hook
         # self.lift_stage2tilt = Solenoid(CTRE_PCM, 4)  # arm 2 tilt
@@ -285,7 +288,7 @@ class FROGbot(magicbot.MagicRobot):
 
         # Get gunner controls
         if self.gunnerControl.getYButtonReleased():
-            self.shooter.incrementFlywheelSpeeds()
+            self.firecontrol.logShottimer()
         if self.gunnerControl.getAButtonReleased():
             self.shooter.decrementFlywheelSpeeds()
         # if self.gunnerControl.getBButtonReleased():
@@ -338,6 +341,13 @@ class FROGbot(magicbot.MagicRobot):
             self.objectTargeted = [TARGET_GOAL, TARGET_CARGO][
                 self.objectTargeted
             ]
+            if self.objectTargeted == TARGET_GOAL:
+                self.led.targetingGoal
+            else:
+                if self.vision.allianceColor == DriverStation.Alliance.kBlue:
+                    self.led.targetingBlue()
+                else:
+                    self.led.targetingRed()
 
         # toggles targeting mode
         if self.gunnerControl.getXButtonReleased():
@@ -428,7 +438,7 @@ class FROGbot(magicbot.MagicRobot):
             and not self.overrideTargeting
             and self.objectTargeted == TARGET_CARGO
         ):
-            targetY = (targetY + 1) / 1.25
+            targetY = (targetY + 1)
             self.vX = -math.copysign(
                 abs(
                     (((targetY + 1) / 2) * self.speedFactor) + self.speedFactor
@@ -445,7 +455,7 @@ class FROGbot(magicbot.MagicRobot):
             )
             self.driveMode = FIELD_ORIENTED
 
-        if self.vX or self.vY or self.vT or targetAngle:
+        if self.vX or self.vY or self.vT or not targetAngle is None:
             if self.driveMode == FIELD_ORIENTED:
                 self.swerveChassis.field_oriented_drive(
                     self.vX, self.vY, self.vT, targetAngle

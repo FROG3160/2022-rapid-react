@@ -1,4 +1,4 @@
-from wpilib import DriverStation, Solenoid
+from wpilib import DriverStation, Solenoid, Timer
 from ctre import (
     WPI_TalonFX,
     FeedbackDevice,
@@ -9,7 +9,7 @@ from ctre import (
 from magicbot import feedback, state, timed_state, tunable
 from magicbot.state_machine import StateMachine
 from components.common import TalonPID, Vector2
-from components.sensors import FROGsonic, FROGColor
+from components.sensors import FROGsonic, FROGColor, FROGGyro
 from components.vision import FROGVision
 from components.led import FROGLED
 from logging import Logger
@@ -24,7 +24,7 @@ FLYWHEEL_MAX_ACCEL = FLYWHEEL_MAX_VEL / 50
 FLYWHEEL_MAX_DECEL = -FLYWHEEL_MAX_ACCEL
 FLYWHEEL_INCREMENT = 100
 FLYWHEEL_VEL_TOLERANCE = 0.03
-FLYWHEEL_LOOP_RAMP = 0.25
+FLYWHEEL_LOOP_RAMP = 0.1
 
 ULTRASONIC_DISTANCE_INCHES = 9.5  # 8.65
 PROXIMITY_THRESHOLD = 1000
@@ -84,6 +84,8 @@ class Flywheel:
         # FLYWHEEL_PID.configTalon(self.motor)
         # use closed loop ramp to accelerate smoothly
         self.motor.configClosedloopRamp(FLYWHEEL_LOOP_RAMP)
+        self.motor.configVoltageCompSaturation(12)
+        self.motor.enableVoltageCompensation(True)
 
     def setVelocity(self, velocity):
         # self._controlMode = ControlMode.Velocity
@@ -111,6 +113,8 @@ class Flywheel:
 class Intake:
     retrieve: Solenoid
     hold: Solenoid
+    rollerDeploy: Solenoid
+    rollerMotor: WPI_TalonFX
 
     def __init__(self):
         pass
@@ -132,6 +136,12 @@ class Intake:
 
     def deactivateHold(self):
         self.hold.set(False)
+
+    def extendRoller(self):
+        self.rollerDeploy.set(True)
+
+    def retractRoller(self):
+        self.rollerDeploy.set(False)
 
     def execute(self):
         pass
@@ -252,27 +262,35 @@ class ShooterControl(StateMachine):
     vision: FROGVision
     color: FROGColor
     led: FROGLED
+    gyro: FROGGyro
 
     flywheel_speed = tunable(0)
-    flywheel_trim = tunable(1.0)
+    flywheel_trim = tunable(0.95)
     trimIncrement = tunable(0.01)
     target_tolerance = tunable(2.5)
     logger: Logger
+    tofDivisor = tunable(100)
 
     def __init__(self):
         self.autoIntake = True
         self.autoFire = True
         self.ballColor = None
-        self.driverstation = DriverStation
         self.targetAzimuth = None
         self.shotLowerVelocity = None
         self.shotUpperVelocity = None
         self.shotRange = None
+        self.shotTimer = Timer()
 
     @state(first=True)
     def waitForBall(self, initial_call):
         if initial_call:
             self.reset_pneumatics()
+
+        if self.vision.hasCargoTargets:
+            if self.vision.allianceColor == BLUE:
+                self.led.foundBlue()
+            else:
+                self.led.foundRed()
 
         if self.getBallInPosition():
             self.shooter.dropLaunch()
@@ -326,6 +344,7 @@ class ShooterControl(StateMachine):
     @state()
     def waitForGoal(self):
         if self.vision.hasGoalTargets:
+            self.led.foundGoal()
             self.next_state("waitForFlywheel")
 
     @state()
@@ -335,6 +354,14 @@ class ShooterControl(StateMachine):
         else:
             flyspeed = self.calculateFlywheelSpeed()
         self.shooter.setFlywheelSpeeds(flyspeed)
+
+        if self.isOnTarget():
+            self.led.ColorChangeGreen()
+        else:
+            if self.vision.hasGoalTargets:
+                self.led.foundGoal()
+            else:
+                self.led.targetingGoal()
 
         if not flyspeed == 0:
             if self.shooter.isReady() and self.fireCommanded:
@@ -351,13 +378,20 @@ class ShooterControl(StateMachine):
         if initial_call:
             # raise launch, self.intake.grab resets
             self.shooter.raiseLaunch()
+            self.shotTimer.reset()
+            self.shotTimer.start()
             self.shotLowerVelocity = self.shooter.lowerFlywheel.getVelocity()
             self.shotUpperVelocity = self.shooter.upperFlywheel.getVelocity()
             self.shotRange = self.vision.getRangeInches()
             self.logger.info(
-                "Shot fired -- flywheel speed: %s, range: %s",
-                self.shooter._flywheel_speeds,
-                self.vision.getRangeInches()
+                "Shot fired -- lower: %s, upper: %s, range: %s, angle: %s",
+                self.shooter.lowerFlywheel.getVelocity(),
+                self.shooter.upperFlywheel.getVelocity(),
+                self.vision.getRangeInches(),
+                self.gyro.getYaw()
+            )
+            self.logger.info(
+                "Shot data: lower: %s, upper: %s, angle: %s"
             )
 
     @feedback()
@@ -390,7 +424,7 @@ class ShooterControl(StateMachine):
     @feedback()
     def isAtAzimuth(self):
         if self.targetAzimuth:
-            return abs(self.gyro.getAngle() - self.targetAzimuth) < self.target_tolerance 
+            return abs(self.gyro.getYaw() - self.targetAzimuth) < self.target_tolerance 
 
     @feedback()
     def getBallColor(self):
@@ -437,19 +471,31 @@ class ShooterControl(StateMachine):
     def commandToFire(self, mode):
         self.fireCommanded = mode
 
+    def logShottimer(self):
+        self.logger.info(
+            "ToF: %s",
+            self.shotTimer.get()
+        )
+
     def calcMovingShot(self, vX, vY, target_range, target_azimuth):
-        print("--PARAMS--", vX, vY, target_azimuth)
         # TODO: calculate time of flight from range
         # and flywheel speed?
-        tof = range / 200  # assuming 200 inches in one second
+        self.logger.info(
+            "calcMovingShot inputs: %s, %s, %s, %s",
+            vX, vY, target_range, target_azimuth
+        )
+        tof = target_range / self.tofDivisor  # assuming 200 inches in one second
 
         vC = Vector2(vX * tof, vY * tof)
-        vT = Vector2.from_polar((target_range, target_azimuth))
+        vT = Vector2.from_polar(target_range, target_azimuth)
 
         vS = vT - vC
         # print(sV.as_polar())
         # return sV.as_polar()
-
+        self.logger.info(
+            "Calculated shot vector: %s",
+            vS
+        )
         return vS.to_polar()
 
         # if vX == 0:
