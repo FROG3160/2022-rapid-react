@@ -31,6 +31,7 @@ class FROGLED:
     def __init__(self, canID):
         self.candle = CANdle(canID)
         self.candle.configLEDType(LEDStripType.GRB)
+        self.candle.configBrightnessScalar(0.6)
         self.Default()
 
     def ColorChangeRed(self):
