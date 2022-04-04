@@ -14,6 +14,7 @@ from components.led import FROGLED
 STAGE1_THRESHOLD = 534000.0
 STAGE1_TILT_THRESHOLD = 24000
 STAGE2_THRESHOLD = 164638.0
+STAGE1_RETRACT_LIMIT = -450000
 
 limitSwitchConfig = (
     LimitSwitchSource.FeedbackConnector,
@@ -47,9 +48,9 @@ class FROGLift:
         self.stage1extend.setSensorPhase(False)
         self.stage1extend.configForwardLimitSwitchSource(*limitSwitchConfig)
         self.stage1extend.configReverseLimitSwitchSource(*limitSwitchConfig)
-        self.stage1extend.configForwardSoftLimitEnable(True)
-        self.stage1extend.configForwardSoftLimitThreshold(STAGE1_THRESHOLD)
-        self.stage1extend.configReverseSoftLimitEnable(False)
+        self.stage1extend.configForwardSoftLimitEnable(False)
+        self.stage1extend.configReverseSoftLimitEnable(True)
+        self.stage1extend.configReverseSoftLimitThreshold(STAGE1_RETRACT_LIMIT)
         self.stage1extend.setStatusFramePeriod(
             StatusFrameEnhanced.Status_1_General, 250
         )
@@ -82,7 +83,7 @@ class FROGLift:
     def extendStage1(self):
         if not self.stage1extend.isFwdLimitSwitchClosed():
             self.stage1extend.set(self.stage1ExtendSpeed)
-            self.led.climbing()
+            self.led.climbExtend()
         else:
             self.led.Default()
             self.stage1extend.set(0)
@@ -102,7 +103,7 @@ class FROGLift:
     def retractStage1(self):
         if not self.stage1extend.isRevLimitSwitchClosed():
             self.stage1extend.set(-self.stage1RetractSpeed)
-            self.led.climbing()
+            self.led.climbRetract()
         else:
             self.led.Default()
             self.stage1extend.set(0)
