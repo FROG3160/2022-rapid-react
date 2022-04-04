@@ -40,7 +40,7 @@ class FROGGyro:
 
     @feedback()
     def getOffsetYaw(self):
-        chassisYaw = self.gyro.getYaw()
+        chassisYaw = self.getYaw()
         fieldYaw = Rotation2d.fromDegrees(chassisYaw + self.starting_angle)
         return math.degrees(math.atan2(fieldYaw.sin(), fieldYaw.cos()))
 
@@ -67,8 +67,6 @@ class FROGGyro:
     @feedback()
     def getRadiansCCW(self):
         return math.radians(self.gyro.getYaw())
-
-
 
     @feedback()
     def getAngleAdjustment(self):
