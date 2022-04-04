@@ -124,9 +124,6 @@ class Intake:
             FeedbackDevice.IntegratedSensor, 0, 0
         )
         self.rollerMotor.setNeutralMode(NeutralMode.Coast)
-        self.rollerMotor.configClosedloopRamp(0.1)
-        self.rollerMotor.configVoltageCompSaturation(12)
-        self.rollerMotor.enableVoltageCompensation(True)
         self.rollerMotor.setInverted(True)
 
     def activateRetrieve(self):
@@ -154,13 +151,27 @@ class Intake:
         self.rollerDeploy.set(False)
 
     def runRoller(self):
-        self.rollerMotor.set(0.2)
+        self.rollerMotor.set(ControlMode.PercentOutput, 0.2)
 
     def stopRoller(self):
         self.rollerMotor.set(0)
 
     def reverseRoller(self):
-        self.rollerMotor.set(-0.4)
+        self.rollerMotor.set(ControlMode.PercentOutput, -0.4)
+
+    def intakeBall(self):
+        self.extendRoller()
+        self.runRoller()
+
+    def rejectBall(self):
+        self.deactivateHold()
+        
+        self.extendRoller()
+        self.reverseRoller()
+
+    def raiseIntake(self):
+        self.retractRoller()
+        self.stopRoller()
 
     def execute(self):
         pass
@@ -284,9 +295,9 @@ class ShooterControl(StateMachine):
     gyro: FROGGyro
 
     flywheel_speed = tunable(0)
-    flywheel_trim = tunable(0.95)
+    flywheel_trim = tunable(1.01)
     trimIncrement = tunable(0.01)
-    target_tolerance = tunable(2.5)
+    target_tolerance = tunable(2.0)
     logger: Logger
     tofDivisor = tunable(100)
 
@@ -342,13 +353,15 @@ class ShooterControl(StateMachine):
     def checkBallColor(self):
         self.ballColor = self.getBallColor()
         if self.ballColor is not None:
-            if self.ballColor:
-                self.led.ColorChangeBlue()
+            if self.ballColor == self.vision.allianceColor:
+                if self.ballColor:
+                    self.led.ColorChangeBlue()
+                else:
+                    self.led.ColorChangeRed()
+                self.next_state("holdBall")
             else:
-                self.led.ColorChangeRed()
-            self.next_state("holdBall")
-            # else:
-            #     self.next_state("release")ba
+                self.next_state("reject_ball")
+
         else:
             self.next_state("release")
 
@@ -383,10 +396,11 @@ class ShooterControl(StateMachine):
                 self.led.targetingGoal()
 
         if not flyspeed == 0:
-            if self.shooter.isReady() and self.fireCommanded:
-                self.next_state_now("fire")
-            elif self.shooter.isReady() and self.isOnTarget():
-                self.next_state("fire")
+            if self.shooter.isReady():
+                if self.fireCommanded:
+                    self.next_state_now("fire")
+                elif self.isOnTarget() and self.isRotatingSlow():
+                    self.next_state("fire")
 
     @timed_state(duration=0.25, must_finish=True, next_state="fire")
     def waitToFire(self):
@@ -403,14 +417,12 @@ class ShooterControl(StateMachine):
             self.shotUpperVelocity = self.shooter.upperFlywheel.getVelocity()
             self.shotRange = self.vision.getRangeInches()
             self.logger.info(
-                "Shot fired -- lower: %s, upper: %s, range: %s, angle: %s",
+                "Shot fired -- lower: %s, upper: %s, range: %s, angle: %s, targetDiff: %s",
                 self.shooter.lowerFlywheel.getVelocity(),
                 self.shooter.upperFlywheel.getVelocity(),
                 self.vision.getRangeInches(),
-                self.gyro.getYaw()
-            )
-            self.logger.info(
-                "Shot data: lower: %s, upper: %s, angle: %s"
+                self.gyro.getYaw(),
+                self.vision.getFilteredGoalYaw()
             )
 
     @feedback()
@@ -430,6 +442,16 @@ class ShooterControl(StateMachine):
         self.reset_pneumatics()
         if self.autoIntake:
             self.next_state("waitForBall")
+
+    @feedback()
+    def isRotatingSlow(self):
+        return abs(self.gyro.getRotationDPS) < 0.5
+
+
+    @timed_state(duration=0.5, must_finish=True, next_state="waitForBall")
+    def reject_ball(self):
+        self.reset_pneumatics()
+        self.intake.rejectBall()
 
     @feedback()
     def isInRange(self):
@@ -469,7 +491,8 @@ class ShooterControl(StateMachine):
             return 0
 
     def flywheelSpeedFromRange(self, range):
-        return (17.597 * range + 8481.9)
+        return (16.705 * range) + 8055.2
+        # return (17.597 * range + 8481.9)
 
     def reset_pneumatics(self):
         self.intake.deactivateHold()
