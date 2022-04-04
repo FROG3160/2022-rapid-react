@@ -25,6 +25,7 @@ FLYWHEEL_MAX_DECEL = -FLYWHEEL_MAX_ACCEL
 FLYWHEEL_INCREMENT = 100
 FLYWHEEL_VEL_TOLERANCE = 0.03
 FLYWHEEL_LOOP_RAMP = 0.1
+FLYWHEEL_REJECT_SPEED = 4000
 
 ULTRASONIC_DISTANCE_INCHES = 9.5  # 8.65
 PROXIMITY_THRESHOLD = 1000
@@ -406,7 +407,7 @@ class ShooterControl(StateMachine):
     def waitToFire(self):
         pass
 
-    @timed_state(duration=1, must_finish=True, next_state="release")
+    @timed_state(duration=0.5, must_finish=True, next_state="release")
     def fire(self, initial_call):
         if initial_call:
             # raise launch, self.intake.grab resets
@@ -447,11 +448,10 @@ class ShooterControl(StateMachine):
     def isRotatingSlow(self):
         return abs(self.gyro.getRotationDPS) < 0.5
 
-
-    @timed_state(duration=0.5, must_finish=True, next_state="waitForBall")
+    @timed_state(duration=0.5, must_finish=True, next_state="release")
     def reject_ball(self):
-        self.reset_pneumatics()
-        self.intake.rejectBall()
+        self.shooter.setFlywheelSpeeds(FLYWHEEL_REJECT_SPEED)
+        self.shooter.raiseLaunch()
 
     @feedback()
     def isInRange(self):
