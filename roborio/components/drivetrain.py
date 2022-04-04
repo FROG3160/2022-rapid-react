@@ -14,7 +14,8 @@ from ctre import (
     StatusFrameEnhanced,
 )
 from wpimath.estimator import SwerveDrive4PoseEstimator
-from wpimath.controller import PIDController
+from wpimath.controller import PIDController, ProfiledPIDControllerRadians
+from wpimath.trajectory import TrapezoidProfileRadians
 from wpilib import Field2d
 from wpimath.geometry import Translation2d, Rotation2d, Pose2d
 from wpimath.kinematics import (
@@ -27,6 +28,7 @@ import math
 from magicbot import feedback, tunable
 from .sensors import FROGGyro
 from .common import DriveUnit, Rescale
+from logging import Logger
 
 
 # Motor Control modes
@@ -329,12 +331,19 @@ class SwerveChassis:
     swerveBackRight: SwerveModule
     gyro: FROGGyro
     field: Field2d
+    logger: Logger
 
     linear_offset = 0.07
     rotation_offset = 0.07  # tunable(0.07)
 
     linearRescale = Rescale((0.0, 1.0), (0, 1 - 0.07))
     rotationRescale = Rescale((0.0, 1.0), (0.0, 1 - 0.07))
+
+    profiledP = tunable(3.1)
+    profiledI = tunable(0)
+    profiledD = tunable(0.4)
+    profiledMaxVelocity = tunable(math.pi * 4)
+    profiledMaxAccel = tunable(math.pi * 4)
 
     def __init__(self):
         self.enabled = False
@@ -356,47 +365,77 @@ class SwerveChassis:
     def drive(self, vX, vY, vT, target_angle=None):
         # takes values from the joystick and translates it
         # into chassis movement
+        xSpeed = ySpeed = tSpeed = 0
         if vX:
-            vX = math.copysign(
-                self.linearRescale(abs(vX)) + self.linear_offset, vX
+            xSpeed = (
+                math.copysign(
+                    self.linearRescale(abs(vX)) + self.linear_offset, vX
+                )
+                * kMaxMetersPerSec
             )
         if vY:
-            vY = math.copysign(
-                self.linearRescale(abs(vY)) + self.linear_offset, vY
+            ySpeed = (
+                math.copysign(
+                    self.linearRescale(abs(vY)) + self.linear_offset, vY
+                )
+                * kMaxMetersPerSec
             )
-        if target_angle:
-            vT = self.rotationController.calculate(self.gyro.getYaw(), target_angle)
+        if target_angle is not None:
+            # tSpeed = self.rotationController.calculate(self.gyro.getYaw(), target_angle) * kMaxRadiansPerSec
+            tSpeed = self.profiledRotationController.calculate(
+                math.radians(self.gyro.getYaw()), math.radians(target_angle)
+            )
+            # self.logger.info("Calculated Rotation: vT: %s, vTP: %s", vT, vTP)
         elif vT:
-            vT = math.copysign(
-                self.rotationRescale(abs(vT)) + self.rotation_offset, vT
+            tSpeed = (
+                math.copysign(
+                    self.rotationRescale(abs(vT)) + self.rotation_offset, vT
+                )
+                * kMaxRadiansPerSec
             )
 
         self.speeds = ChassisSpeeds(
-            vX * kMaxMetersPerSec, vY * kMaxMetersPerSec, vT * kMaxRadiansPerSec
+            xSpeed,
+            ySpeed,
+            tSpeed,
         )
 
     def field_oriented_drive(self, vX, vY, vT, target_angle=None):
         # takes values from the joystick and translates it
         # into chassis movement
+        xSpeed = ySpeed = tSpeed = 0
         if vX:
-            vX = math.copysign(
-                self.linearRescale(abs(vX)) + self.linear_offset, vX
+            xSpeed = (
+                math.copysign(
+                    self.linearRescale(abs(vX)) + self.linear_offset, vX
+                )
+                * kMaxMetersPerSec
             )
         if vY:
-            vY = math.copysign(
-                self.linearRescale(abs(vY)) + self.linear_offset, vY
+            ySpeed = (
+                math.copysign(
+                    self.linearRescale(abs(vY)) + self.linear_offset, vY
+                )
+                * kMaxMetersPerSec
             )
-        if target_angle:
-            vT = self.rotationController.calculate(self.gyro.getYaw(), target_angle)
+        if target_angle is not None:
+            # tSpeed = self.rotationController.calculate(self.gyro.getYaw(), target_angle) * kMaxRadiansPerSec
+            tSpeed = self.profiledRotationController.calculate(
+                math.radians(self.gyro.getYaw()), math.radians(target_angle)
+            )
+            # self.logger.info("Calculated Rotation: vT: %s, vTP: %s", vT, vTP)
         elif vT:
-            vT = math.copysign(
-                self.rotationRescale(abs(vT)) + self.rotation_offset, vT
+            tSpeed = (
+                math.copysign(
+                    self.rotationRescale(abs(vT)) + self.rotation_offset, vT
+                )
+                * kMaxRadiansPerSec
             )
 
         self.speeds = ChassisSpeeds.fromFieldRelativeSpeeds(
-            vX * kMaxMetersPerSec,
-            vY * kMaxMetersPerSec,
-            vT * kMaxRadiansPerSec,
+            xSpeed,
+            ySpeed,
+            tSpeed,
             Rotation2d.fromDegrees(self.gyro.getYaw()),
         )
 
@@ -479,6 +518,21 @@ class SwerveChassis:
         self.rotationController = PIDController(0.01, 0, 0.001)
         self.rotationController.setTolerance(1.5)
         self.rotationController.enableContinuousInput(-180, 180)
+        self.configProfiledRotationController()
+
+    def configProfiledRotationController(self):
+        profiledRotationConstraints = TrapezoidProfileRadians.Constraints(
+            self.profiledMaxVelocity, self.profiledMaxAccel
+        )
+        self.profiledRotationController = ProfiledPIDControllerRadians(
+            self.profiledP,
+            self.profiledI,
+            self.profiledD,
+            profiledRotationConstraints,
+        )
+        self.profiledRotationController.enableContinuousInput(-math.pi, math.pi)
+        self.profiledRotationController.reset(math.radians(self.gyro.getYaw()))
+        #self.profiledRotationController.setTolerance(math.radians(2.0))
 
     def execute(self):
         # execute is called each iteration
@@ -507,7 +561,8 @@ class SwerveChassis:
             self.setCurrentSpeeds()
             # updating odometry to keep track of position and angle
             self.odometry.update(
-                Rotation2d.fromDegrees((self.gyro.getYaw())), *self.current_states
+                Rotation2d.fromDegrees((self.gyro.getYaw())),
+                *self.current_states,
             )
             self.field.setRobotPose(self.odometry.getPose())
 
