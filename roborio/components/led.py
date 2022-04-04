@@ -23,7 +23,8 @@ TARGETING_BLUE = StrobeAnimation(0, 0, 255, 0, 0.1, NUM_LEDS)
 FOUND_BLUE = StrobeAnimation(0, 0, 255, 0, 0.5, NUM_LEDS)
 TARGETING_GOAL = StrobeAnimation(0, 255, 0, 0, 0.1, NUM_LEDS)
 FOUND_GOAL = StrobeAnimation(0, 255, 0, 0, 0.5, NUM_LEDS)
-CLIMB_EXTEND = ColorFlowAnimation(200, 0, 70, 0, .9, NUM_LEDS, FORWARD)
+CLIMB_EXTEND = ColorFlowAnimation(200, 0, 70, 0, .9, NUM_LEDS, BACKWARD)
+CLIMB_RETRACT = ColorFlowAnimation(200, 0, 70, 0, .9, NUM_LEDS, FORWARD)
 FIRE = FireAnimation(1, 0.5, NUM_LEDS, 0.7, 0.3)
 
 
@@ -46,7 +47,10 @@ class FROGLED:
     def WhenShoot(self):
         self.candle.animate(COLORFLOWFORWARD)
 
-    def climbing(self):
+    def climbRetract(self):
+        self.candle.animate(CLIMB_RETRACT)
+
+    def climbExtend(self):
         self.candle.animate(CLIMB_EXTEND)
 
     def WhenDoneShooting(self):
