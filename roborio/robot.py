@@ -188,6 +188,7 @@ class FROGbot(magicbot.MagicRobot):
         # autoDrive is for moving the robot toward a target,
         # particularly the balls/cargo
         self.autoDrive = False
+        self.driverMode = False
         self.objectTargeted = TARGET_GOAL
 
         self.xOrig = self.yOrig = self.tOrig = 0
@@ -338,12 +339,13 @@ class FROGbot(magicbot.MagicRobot):
                 self.objectTargeted
             ]
             if self.objectTargeted == TARGET_GOAL:
-                self.led.targetingGoal
+                self.led.targetingGoal()
             else:
                 if self.vision.allianceColor == DriverStation.Alliance.kBlue:
                     self.led.targetingBlue()
                 else:
                     self.led.targetingRed()
+            self.swerveChassis.profiledRotationController.reset(0)
 
         # toggles targeting mode
         if self.gunnerControl.getXButtonReleased():
@@ -374,11 +376,24 @@ class FROGbot(magicbot.MagicRobot):
         elif pov == 180:
             self.firecontrol.lowerFlywheelTrim()
 
+
+
         # allows driver to override targeting control of rotation
         if self.driveStick.getRawButton(2):
             self.overrideTargeting = True
         else:
             self.overrideTargeting = False
+
+        if self.driveStick.getRawButtonPressed(7):
+            self.swerveChassis.configProfiledRotationController()
+            self.swerveChassis.profiledRotationController.reset(self.gyro.getYaw())
+
+        if self.driveStick.getRawButtonPressed(11):
+            self.driverMode = [True, False][self.driverMode]
+            if self.driverMode:
+                self.vision.activateDriverMode()
+            else:
+                self.vision.deactivateDriverMode()
 
         self.xOrig = joystickAxisDeadband(self.driveStick.getFieldForward())
         self.yOrig = joystickAxisDeadband(self.driveStick.getFieldLeft())
@@ -398,14 +413,15 @@ class FROGbot(magicbot.MagicRobot):
         self.vX = self.vY = self.vT = 0
         targetAngle = None
 
-        if self.driveStick.getTrigger():
+        if self.driveStick.getTriggerPressed():
             self.autoDrive = True
-            self.intake.extendRoller()
-            self.intake.runRoller()
-        else:
-            self.intake.retractRoller()
-            self.intake.stopRoller()
+            self.intake.intakeBall()
+
+        if self.driveStick.getTriggerReleased():
+            self.intake.raiseIntake()
             self.autoDrive = False
+
+        
 
         # if self.driveStick.getRawButtonPressed(7):
         #     self.lift.activateClaw()
@@ -441,7 +457,7 @@ class FROGbot(magicbot.MagicRobot):
             targetY = (targetY + 1)
             self.vX = -math.copysign(
                 abs(
-                    (((targetY + 1) / 2) * self.speedFactor) + self.speedFactor
+                    (((targetY + 1) / 2) * self.speedFactor) + self.speedFactor/2
                 ),
                 targetY,
             )
@@ -453,9 +469,12 @@ class FROGbot(magicbot.MagicRobot):
                 math.copysign(self.xOrig**2, self.xOrig),
                 math.copysign(self.yOrig**2, self.yOrig),
             )
-            self.driveMode = FIELD_ORIENTED
+            if self.driverMode:
+                self.driveMode = ROBOT_ORIENTED
+            else:
+                self.driveMode = FIELD_ORIENTED
 
-        if self.vX or self.vY or self.vT or not targetAngle is None:
+        if self.vX or self.vY or self.vT or targetAngle is not None:
             if self.driveMode == FIELD_ORIENTED:
                 self.swerveChassis.field_oriented_drive(
                     self.vX, self.vY, self.vT, targetAngle

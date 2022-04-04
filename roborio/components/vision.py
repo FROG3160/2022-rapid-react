@@ -34,7 +34,7 @@ kInvalid = DriverStation.Alliance.kInvalid  # 2
 
 class FROGVision:
 
-    goal_offset = tunable(4.0)
+    goal_offset = tunable(0.0)
 
     def __init__(self):
 
@@ -107,7 +107,8 @@ class FROGVision:
 
     @feedback()
     def getFilteredGoalYaw(self):
-        return self.filteredGoalYaw
+        if self.filteredGoalYaw and self.goal_offset is not None:
+            return self.filteredGoalYaw + self.goal_offset
 
     @feedback()
     def getFilteredGoalPitch(self):
@@ -138,7 +139,7 @@ class FROGVision:
 
     def getGoalX(self):
         if target := self.GoalTarget.getYaw():
-            return (target / PI_X_div) + self.goal_offset
+            return (target + self.goal_offset) / PI_X_div
 
     @feedback(key="Goal X")
     def getGoalXAverage(self):
