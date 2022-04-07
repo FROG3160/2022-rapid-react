@@ -22,7 +22,7 @@ from components.driverstation import FROGStick, FROGBoxGunner
 from components.sensors import FROGGyro, FROGdar, FROGsonic, FROGColor
 from components.shooter import FROGShooter, Flywheel, Intake
 from components.vision import FROGVision, LC_Y_div
-from components.common import Rescale
+from components.common import Rescale, angleErrorToRotation
 from components.shooter import ShooterControl
 from components.climber import FROGLift
 from components.led import FROGLED
@@ -78,7 +78,7 @@ class FROGbot(magicbot.MagicRobot):
 
     # driverstation: DriverStation
 
-    speedFactor = tunable(0.075)
+    speedFactor = tunable(0.15)
 
     def allianceColor(self):
 
@@ -159,7 +159,6 @@ class FROGbot(magicbot.MagicRobot):
         self.intake_rollerMotor = WPI_TalonFX(52)
 
         self.shooter_launch = Solenoid(CTRE_PCM, 0)
-
 
         # self.lift_stage1claw = Solenoid(CTRE_PCM, 3)  # grabber - hook
         # self.lift_stage2tilt = Solenoid(CTRE_PCM, 4)  # arm 2 tilt
@@ -345,8 +344,8 @@ class FROGbot(magicbot.MagicRobot):
                     self.led.targetingBlue()
                 else:
                     self.led.targetingRed()
-            self.swerveChassis.profiledRotationController.reset(0)
-
+            # self.swerveChassis.profiledRotationController.reset(math.radians(self.gyro.getYaw()))
+        self.firecontrol.objectTargeted = self.objectTargeted
         # toggles targeting mode
         if self.gunnerControl.getXButtonReleased():
             self.targetLock = [True, False][self.targetLock]
@@ -376,8 +375,6 @@ class FROGbot(magicbot.MagicRobot):
         elif pov == 180:
             self.firecontrol.lowerFlywheelTrim()
 
-
-
         # allows driver to override targeting control of rotation
         if self.driveStick.getRawButton(2):
             self.overrideTargeting = True
@@ -386,7 +383,9 @@ class FROGbot(magicbot.MagicRobot):
 
         if self.driveStick.getRawButtonPressed(7):
             self.swerveChassis.configProfiledRotationController()
-            self.swerveChassis.profiledRotationController.reset(self.gyro.getYaw())
+            self.swerveChassis.profiledRotationController.reset(
+                math.radians(self.gyro.getOffsetYaw())
+            )
 
         if self.driveStick.getRawButtonPressed(11):
             self.driverMode = [True, False][self.driverMode]
@@ -421,8 +420,6 @@ class FROGbot(magicbot.MagicRobot):
             self.intake.raiseIntake()
             self.autoDrive = False
 
-        
-
         # if self.driveStick.getRawButtonPressed(7):
         #     self.lift.activateClaw()
 
@@ -431,16 +428,20 @@ class FROGbot(magicbot.MagicRobot):
 
         # determine twist/rotation
         if self.targetLock and targetYaw and not self.overrideTargeting:
-            # self.tOrig = self.getRotationPID(target)
-            # * self.rotationFactor
-            # targetX = -visionTwistDeadband(targetX)
-            # self.vT = math.copysign(targetX**2, targetX)
+            # # self.tOrig = self.getRotationPID(target)
+            # # * self.rotationFactor
+            # # targetX = -visionTwistDeadband(targetX)
+            # # self.vT = math.copysign(targetX**2, targetX)
             # #self.vT = -math.copysign(targetX ** self.rotationFactor, targetX)
-            targetAngle = self.gyro.getYaw() - targetYaw
+            # targetAngle = self.gyro.getYaw() - targetYaw
+            if self.firecontrol.isOnTarget():
+                self.vT = 0
+            else:
+                self.vT = angleErrorToRotation(-targetYaw)
         elif self.driveStick.getPOV() > -1:
             targetAngle = -(self.driveStick.getPOV() - 180)
-            # angleX = visionTwistDeadband((targetAngle - self.gyro.getYaw())/360)
-            # self.vT = angleX
+            # # angleX = visionTwistDeadband((targetAngle - self.gyro.getYaw())/360)
+            # # self.vT = angleX
         else:
             new_twist = joystickTwistDeadband(
                 self.driveStick.getFieldRotation()
@@ -454,10 +455,11 @@ class FROGbot(magicbot.MagicRobot):
             and not self.overrideTargeting
             and self.objectTargeted == TARGET_CARGO
         ):
-            targetY = (targetY + 1)
-            self.vX = -math.copysign(
+            targetY = targetY + 1
+            self.vX = math.copysign(
                 abs(
-                    (((targetY + 1) / 2) * self.speedFactor) + self.speedFactor/2
+                    (((targetY + 1) / 2) * self.speedFactor)
+                    + self.speedFactor / 2
                 ),
                 targetY,
             )
@@ -480,12 +482,18 @@ class FROGbot(magicbot.MagicRobot):
                     self.vX, self.vY, self.vT, targetAngle
                 )
             else:
-                self.swerveChassis.drive(self.vX, self.vY, self.vT, targetAngle)
+                # robot oriented drive is from the perspective of the INTAKE
+                # at the back of the robot, so we revers the X and Y
+                self.swerveChassis.drive(
+                    -self.vX, -self.vY, self.vT, targetAngle
+                )
         else:
             self.swerveChassis.field_oriented_drive(0, 0, 0)
 
         if self.driveStick.getRawButtonPressed(3):
             self.gyro.resetGyro()
+            self.gyro.starting_angle = 0
+            self.swerveChassis.resetOdometry()
             self.swerveChassis.resetRemoteEncoders()
             self.swerveChassis.field_oriented_drive(0, 0, 0)
 

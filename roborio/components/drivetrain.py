@@ -337,14 +337,15 @@ class SwerveChassis:
     rotation_offset = 0.07  # tunable(0.07)
 
     linearRescale = Rescale((0.0, 1.0), (0, 1 - 0.07))
-    rotationRescale = Rescale((0.0, 1.0), (0.0, 1 - 0.07))
+    rotationRescale = Rescale((0.0, 1.0), (0.066, 1))
 
-    profiledP = tunable(3.1)
-    profiledI = tunable(0)
+    profiledP = tunable(4.2)
+    profiledI = tunable(0.4)
     profiledD = tunable(0.4)
-    profiledMaxVelocity = tunable(math.pi * 4)
-    profiledMaxAccel = tunable(math.pi * 4)
+    profiledMaxVelocity = tunable(math.pi * 8)
+    profiledMaxAccel = tunable(math.pi * 8)
 
+    
     def __init__(self):
         self.enabled = False
         self.speeds = ChassisSpeeds(0, 0, 0)
@@ -365,16 +366,16 @@ class SwerveChassis:
     def drive(self, vX, vY, vT, target_angle=None):
         # takes values from the joystick and translates it
         # into chassis movement
-        xSpeed = ySpeed = tSpeed = 0
+        self.xSpeed = self.ySpeed = self.tSpeed = 0
         if vX:
-            xSpeed = (
+            self.xSpeed = (
                 math.copysign(
                     self.linearRescale(abs(vX)) + self.linear_offset, vX
                 )
                 * kMaxMetersPerSec
             )
         if vY:
-            ySpeed = (
+            self.ySpeed = (
                 math.copysign(
                     self.linearRescale(abs(vY)) + self.linear_offset, vY
                 )
@@ -382,37 +383,37 @@ class SwerveChassis:
             )
         if target_angle is not None:
             # tSpeed = self.rotationController.calculate(self.gyro.getYaw(), target_angle) * kMaxRadiansPerSec
-            tSpeed = self.profiledRotationController.calculate(
+            self.tSpeed = self.profiledRotationController.calculate(
                 math.radians(self.gyro.getYaw()), math.radians(target_angle)
             )
             # self.logger.info("Calculated Rotation: vT: %s, vTP: %s", vT, vTP)
         elif vT:
-            tSpeed = (
+            self.tSpeed = (
                 math.copysign(
-                    self.rotationRescale(abs(vT)) + self.rotation_offset, vT
+                    self.rotationRescale(abs(vT)), vT
                 )
                 * kMaxRadiansPerSec
             )
 
         self.speeds = ChassisSpeeds(
-            xSpeed,
-            ySpeed,
-            tSpeed,
+            self.xSpeed,
+            self.ySpeed,
+            self.tSpeed,
         )
 
     def field_oriented_drive(self, vX, vY, vT, target_angle=None):
         # takes values from the joystick and translates it
         # into chassis movement
-        xSpeed = ySpeed = tSpeed = 0
+        self.xSpeed = self.ySpeed = self.tSpeed = 0
         if vX:
-            xSpeed = (
+            self.xSpeed = (
                 math.copysign(
                     self.linearRescale(abs(vX)) + self.linear_offset, vX
                 )
                 * kMaxMetersPerSec
             )
         if vY:
-            ySpeed = (
+            self.ySpeed = (
                 math.copysign(
                     self.linearRescale(abs(vY)) + self.linear_offset, vY
                 )
@@ -420,22 +421,22 @@ class SwerveChassis:
             )
         if target_angle is not None:
             # tSpeed = self.rotationController.calculate(self.gyro.getYaw(), target_angle) * kMaxRadiansPerSec
-            tSpeed = self.profiledRotationController.calculate(
+            self.tSpeed = self.profiledRotationController.calculate(
                 math.radians(self.gyro.getYaw()), math.radians(target_angle)
             )
             # self.logger.info("Calculated Rotation: vT: %s, vTP: %s", vT, vTP)
         elif vT:
-            tSpeed = (
+            self.tSpeed = (
                 math.copysign(
-                    self.rotationRescale(abs(vT)) + self.rotation_offset, vT
+                    self.rotationRescale(abs(vT)), vT
                 )
                 * kMaxRadiansPerSec
             )
 
         self.speeds = ChassisSpeeds.fromFieldRelativeSpeeds(
-            xSpeed,
-            ySpeed,
-            tSpeed,
+            self.xSpeed,
+            self.ySpeed,
+            self.tSpeed,
             Rotation2d.fromDegrees(self.gyro.getYaw()),
         )
 
@@ -477,6 +478,9 @@ class SwerveChassis:
         for module in self.modules:
             module.resetRemoteEncoder()
 
+    def resetOdometry(self):
+        self.odometry.resetPosition(Pose2d(0, 0, 0), Rotation2d(0))
+
     def setCurrentSpeeds(self):
         self.current_speeds = self.kinematics.toChassisSpeeds(
             self.current_states
@@ -515,9 +519,9 @@ class SwerveChassis:
             self.kinematics, Rotation2d.fromDegrees(self.gyro.getYaw())
         )
         self.gyro.resetGyro()
-        self.rotationController = PIDController(0.01, 0, 0.001)
-        self.rotationController.setTolerance(1.5)
-        self.rotationController.enableContinuousInput(-180, 180)
+        # self.rotationController = PIDController(0.01, 0, 0.001)
+        # self.rotationController.setTolerance(1.5)
+        # self.rotationController.enableContinuousInput(-180, 180)
         self.configProfiledRotationController()
 
     def configProfiledRotationController(self):

@@ -10,6 +10,7 @@ from ctre.led import (
 
 )
 
+BRIGHTNESS = 0.4
 FORWARD = ColorFlowAnimation.Direction.Forward
 BACKWARD = ColorFlowAnimation.Direction.Backward
 NUM_LEDS = 8 + 47
@@ -32,7 +33,7 @@ class FROGLED:
     def __init__(self, canID):
         self.candle = CANdle(canID)
         self.candle.configLEDType(LEDStripType.GRB)
-        self.candle.configBrightnessScalar(0.6)
+        self.candle.configBrightnessScalar(BRIGHTNESS)
         self.Default()
 
     def ColorChangeRed(self):

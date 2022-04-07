@@ -214,6 +214,15 @@ class DriveUnit:
         wheel_rotations_sec = motor_rotations_sec * self.gearing
         return wheel_rotations_sec * self.circumference
 
+def angleErrorToRotation(error):
+    #return math.copysign(math.exp(0.0352*abs(error))*0.0496, error)
+    # 0.0001*(B2^2) + 0.0024 *B2 - 0.0039
+    abs_error = abs(error)
+    vT = (abs_error**2) * 0.0001 + abs_error * 0.0024 - 0.0039
+    if vT < 0:
+        return 0
+    else:
+        return math.copysign(vT, error)
 
 if __name__ == "__main__":
     wheel = DriveUnit(

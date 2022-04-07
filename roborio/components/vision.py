@@ -34,7 +34,7 @@ kInvalid = DriverStation.Alliance.kInvalid  # 2
 
 class FROGVision:
 
-    goal_offset = tunable(0.0)
+    goal_offset = tunable(-2.0)
 
     def __init__(self):
 

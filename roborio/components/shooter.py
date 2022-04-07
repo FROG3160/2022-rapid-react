@@ -12,6 +12,7 @@ from components.common import TalonPID, Vector2
 from components.sensors import FROGsonic, FROGColor, FROGGyro
 from components.vision import FROGVision
 from components.led import FROGLED
+from components.drivetrain import SwerveChassis
 from logging import Logger
 
 # TODO Find out the Min/Max of the velocity and the tolerence for the Flywheel
@@ -25,13 +26,16 @@ FLYWHEEL_MAX_DECEL = -FLYWHEEL_MAX_ACCEL
 FLYWHEEL_INCREMENT = 100
 FLYWHEEL_VEL_TOLERANCE = 0.03
 FLYWHEEL_LOOP_RAMP = 0.1
-FLYWHEEL_REJECT_SPEED = 4000
+FLYWHEEL_REJECT_SPEED = 5000
 
 ULTRASONIC_DISTANCE_INCHES = 9.5  # 8.65
 PROXIMITY_THRESHOLD = 1000
 
 RED = DriverStation.Alliance.kRed  # 0
 BLUE = DriverStation.Alliance.kBlue  # 1
+
+TARGET_CARGO = 0
+TARGET_GOAL = 1
 
 
 class Flywheel:
@@ -166,7 +170,6 @@ class Intake:
 
     def rejectBall(self):
         self.deactivateHold()
-        
         self.extendRoller()
         self.reverseRoller()
 
@@ -294,9 +297,10 @@ class ShooterControl(StateMachine):
     color: FROGColor
     led: FROGLED
     gyro: FROGGyro
+    swerveChassis: SwerveChassis
 
     flywheel_speed = tunable(0)
-    flywheel_trim = tunable(1.01)
+    flywheel_trim = tunable(1.03)
     trimIncrement = tunable(0.01)
     target_tolerance = tunable(2.0)
     logger: Logger
@@ -311,13 +315,14 @@ class ShooterControl(StateMachine):
         self.shotUpperVelocity = None
         self.shotRange = None
         self.shotTimer = Timer()
+        self.objectTargeted = None
 
     @state(first=True)
     def waitForBall(self, initial_call):
         if initial_call:
             self.reset_pneumatics()
 
-        if self.vision.hasCargoTargets:
+        if self.vision.hasCargoTargets and self.objectTargeted == TARGET_CARGO:
             if self.vision.allianceColor == BLUE:
                 self.led.foundBlue()
             else:
@@ -354,15 +359,12 @@ class ShooterControl(StateMachine):
     def checkBallColor(self):
         self.ballColor = self.getBallColor()
         if self.ballColor is not None:
-            if self.ballColor == self.vision.allianceColor:
-                if self.ballColor:
-                    self.led.ColorChangeBlue()
-                else:
-                    self.led.ColorChangeRed()
-                self.next_state("holdBall")
+            #if self.ballColor: # == self.vision.allianceColor:
+            if self.ballColor:
+                self.led.ColorChangeBlue()
             else:
-                self.next_state("reject_ball")
-
+                self.led.ColorChangeRed()
+            self.next_state("holdBall")
         else:
             self.next_state("release")
 
@@ -370,13 +372,19 @@ class ShooterControl(StateMachine):
     def holdBall(self, initial_call):
         if initial_call:
             # clamp onto ball
+            self.shooter.dropLaunch()
             self.intake.activateHold()
         if self.autoFire:
             self.next_state("waitForGoal")
+        # else:
+        #     if not self.getBallInPosition():
+        #         self.next_state("grab")
+        #     else:
+        #         self.next_state("reject_ball")
 
     @state()
     def waitForGoal(self):
-        if self.vision.hasGoalTargets:
+        if self.vision.hasGoalTargets and self.objectTargeted == TARGET_GOAL:
             self.led.foundGoal()
             self.next_state("waitForFlywheel")
 
@@ -388,19 +396,25 @@ class ShooterControl(StateMachine):
             flyspeed = self.calculateFlywheelSpeed()
         self.shooter.setFlywheelSpeeds(flyspeed)
 
-        if self.isOnTarget():
-            self.led.ColorChangeGreen()
-        else:
-            if self.vision.hasGoalTargets:
-                self.led.foundGoal()
+        if self.objectTargeted == TARGET_GOAL:
+            if self.isOnTarget():
+                self.led.ColorChangeGreen()
             else:
-                self.led.targetingGoal()
+                if self.vision.hasGoalTargets:
+                    self.led.foundGoal()
+                else:
+                    self.led.targetingGoal()
 
         if not flyspeed == 0:
             if self.shooter.isReady():
                 if self.fireCommanded:
                     self.next_state_now("fire")
-                elif self.isOnTarget() and self.isRotatingSlow():
+                elif (
+                    self.isOnTarget()
+                    and self.isRotatingSlow()
+                    and self.isMoveXSlow()
+                    and self.isMoveYSlow()
+                ):
                     self.next_state("fire")
 
     @timed_state(duration=0.25, must_finish=True, next_state="fire")
@@ -422,8 +436,8 @@ class ShooterControl(StateMachine):
                 self.shooter.lowerFlywheel.getVelocity(),
                 self.shooter.upperFlywheel.getVelocity(),
                 self.vision.getRangeInches(),
-                self.gyro.getYaw(),
-                self.vision.getFilteredGoalYaw()
+                self.gyro.getOffsetYaw(),
+                self.vision.getFilteredGoalYaw(),
             )
 
     @feedback()
@@ -446,12 +460,24 @@ class ShooterControl(StateMachine):
 
     @feedback()
     def isRotatingSlow(self):
-        return abs(self.gyro.getRotationDPS) < 0.5
+        return abs(self.gyro.getRotationDPS()) < 0.1
 
-    @timed_state(duration=0.5, must_finish=True, next_state="release")
-    def reject_ball(self):
-        self.shooter.setFlywheelSpeeds(FLYWHEEL_REJECT_SPEED)
-        self.shooter.raiseLaunch()
+    @feedback()
+    def isMoveXSlow(self):
+        return abs(self.swerveChassis.getChassisX_FPS()) < 0.2
+
+    @feedback()
+    def isMoveYSlow(self):
+        return abs(self.swerveChassis.getChassisY_FPS()) < 0.2
+
+    # @timed_state(duration=0.25, next_state='fire_reject')
+    # def reject_ball(self, initial_call):
+    #     self.shooter.setFlywheelSpeeds(FLYWHEEL_REJECT_SPEED)
+    
+    # @state()
+    # def fire_reject(self):
+    #     self.shooter.raiseLaunch()
+    #     self.next_state("release")
 
     @feedback()
     def isInRange(self):
@@ -465,7 +491,10 @@ class ShooterControl(StateMachine):
     @feedback()
     def isAtAzimuth(self):
         if self.targetAzimuth:
-            return abs(self.gyro.getYaw() - self.targetAzimuth) < self.target_tolerance 
+            return (
+                abs(self.gyro.getOffsetYaw() - self.targetAzimuth)
+                < self.target_tolerance
+            )
 
     @feedback()
     def getBallColor(self):
@@ -514,19 +543,21 @@ class ShooterControl(StateMachine):
         self.fireCommanded = mode
 
     def logShottimer(self):
-        self.logger.info(
-            "ToF: %s",
-            self.shotTimer.get()
-        )
+        self.logger.info("ToF: %s", self.shotTimer.get())
 
     def calcMovingShot(self, vX, vY, target_range, target_azimuth):
         # TODO: calculate time of flight from range
         # and flywheel speed?
         self.logger.info(
             "calcMovingShot inputs: %s, %s, %s, %s",
-            vX, vY, target_range, target_azimuth
+            vX,
+            vY,
+            target_range,
+            target_azimuth,
         )
-        tof = target_range / self.tofDivisor  # assuming 200 inches in one second
+        tof = (
+            target_range / self.tofDivisor
+        )  # assuming 200 inches in one second
 
         vC = Vector2(vX * tof, vY * tof)
         vT = Vector2.from_polar(target_range, target_azimuth)
@@ -534,40 +565,8 @@ class ShooterControl(StateMachine):
         vS = vT - vC
         # print(sV.as_polar())
         # return sV.as_polar()
-        self.logger.info(
-            "Calculated shot vector: %s",
-            vS
-        )
+        self.logger.info("Calculated shot vector: %s", vS)
         return vS.to_polar()
-
-        # if vX == 0:
-        #     # can't divide by 0
-        #     chassisMove = math.copysign(math.pi/2, vY)
-        # else:
-        #     chassisMove = math.atan(vY/vX)
-        # if vX < 0 and vY < 0:
-        #     chassisMove = math.radians(180) - chassisMove
-        # elif vX < 0 and vY > 0:
-        #     chassisMove = math.radians(180) + chassisMove
-        # if chassisMove == 0:
-        #     if vX < 0:
-        #         chassisMove = math.pi
-        #     else:
-        #         chassisMove = 0
-        # print("Chassis Move Direction: ", math.degrees(chassisMove))
-
-        # #angleB = math.copysign(chassisMove - math.radians(heading), -heading
-        # angleB = math.pi - chassisMove - math.radians(heading)
-        # # if heading > -90 and heading < 90:
-        # #     angleB = -angleB
-
-        # print("Angle B: ", math.degrees(angleB))
-        # sideA = math.sqrt(vX**2 + vY**2)
-        # sideC = range
-        # sideB = math.sqrt(sideA**2 + sideC**2 - (2 * sideA * sideC * math.cos(angleB)))
-        # #sin(angleA)/sideA = (sin(angleB) / sideB)
-        # angleA = math.degrees(math.asin((math.sin(angleB) / sideB) * sideA))
-        # print('Angle offset: {}, calculated range: {}'.format(angleA, sideB))
 
 
 if __name__ == "__main__":
