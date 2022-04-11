@@ -8,7 +8,7 @@ from ctre import (
 )
 from magicbot import feedback, state, timed_state, tunable
 from magicbot.state_machine import StateMachine
-from components.common import TalonPID, Vector2
+from components.common import TalonPID, Vector2, toleranceFromRange
 from components.sensors import FROGsonic, FROGColor, FROGGyro
 from components.vision import FROGVision
 from components.led import FROGLED
@@ -36,6 +36,7 @@ BLUE = DriverStation.Alliance.kBlue  # 1
 
 TARGET_CARGO = 0
 TARGET_GOAL = 1
+DEFAULT_TARGET_TOLERANCE = 2.0
 
 
 class Flywheel:
@@ -156,13 +157,13 @@ class Intake:
         self.rollerDeploy.set(False)
 
     def runRoller(self):
-        self.rollerMotor.set(ControlMode.PercentOutput, 0.2)
+        self.rollerMotor.set(ControlMode.PercentOutput, 0.3)
 
     def stopRoller(self):
         self.rollerMotor.set(0)
 
     def reverseRoller(self):
-        self.rollerMotor.set(ControlMode.PercentOutput, -0.4)
+        self.rollerMotor.set(ControlMode.PercentOutput, -0.3)
 
     def intakeBall(self):
         self.extendRoller()
@@ -300,9 +301,9 @@ class ShooterControl(StateMachine):
     swerveChassis: SwerveChassis
 
     flywheel_speed = tunable(0)
-    flywheel_trim = tunable(1.03)
+    flywheel_trim = tunable(1.06)
     trimIncrement = tunable(0.01)
-    target_tolerance = tunable(2.0)
+    target_tolerance = tunable(DEFAULT_TARGET_TOLERANCE)
     logger: Logger
     tofDivisor = tunable(100)
 
@@ -316,6 +317,7 @@ class ShooterControl(StateMachine):
         self.shotRange = None
         self.shotTimer = Timer()
         self.objectTargeted = None
+        self.dynamicTolerance = True
 
     @state(first=True)
     def waitForBall(self, initial_call):
@@ -357,9 +359,9 @@ class ShooterControl(StateMachine):
 
     @state()
     def checkBallColor(self):
+        # returns True if Blue, False if Red
         self.ballColor = self.getBallColor()
         if self.ballColor is not None:
-            #if self.ballColor: # == self.vision.allianceColor:
             if self.ballColor:
                 self.led.ColorChangeBlue()
             else:
@@ -432,11 +434,11 @@ class ShooterControl(StateMachine):
             self.shotUpperVelocity = self.shooter.upperFlywheel.getVelocity()
             self.shotRange = self.vision.getRangeInches()
             self.logger.info(
-                "Shot fired -- lower: %s, upper: %s, range: %s, angle: %s, targetDiff: %s",
+                "Shot fired -- lower: %s, upper: %s, range: %s, yaw_tolerance: %s, yaw: %s",
                 self.shooter.lowerFlywheel.getVelocity(),
                 self.shooter.upperFlywheel.getVelocity(),
                 self.vision.getRangeInches(),
-                self.gyro.getOffsetYaw(),
+                self.target_tolerance,
                 self.vision.getFilteredGoalYaw(),
             )
 
@@ -485,6 +487,13 @@ class ShooterControl(StateMachine):
 
     @feedback()
     def isOnTarget(self):
+        if self.dynamicTolerance:
+            if new_tolerance := toleranceFromRange(self.vision.getRangeInches()):
+                self.target_tolerance = new_tolerance
+            else:
+                self.target_tolerance = DEFAULT_TARGET_TOLERANCE
+        else:
+            self.target_tolerance = DEFAULT_TARGET_TOLERANCE
         if yaw := self.vision.getFilteredGoalYaw():
             return abs(yaw) < self.target_tolerance
 
@@ -544,6 +553,13 @@ class ShooterControl(StateMachine):
 
     def logShottimer(self):
         self.logger.info("ToF: %s", self.shotTimer.get())
+
+    @feedback()
+    def getDynamicTolerance(self):
+        return self.dynamicTolerance
+
+    def toggleDynamicTolerance(self):
+        self.dynamicTolerance = [True, False][self.dynamicTolerance]
 
     def calcMovingShot(self, vX, vY, target_range, target_azimuth):
         # TODO: calculate time of flight from range

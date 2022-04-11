@@ -18,10 +18,12 @@ from wpimath.controller import (
 
 ROTATION_FACTOR = 0.15
 
+TARGET_CARGO = 0
+TARGET_GOAL = 1
+
 
 class HoldCargo(AutonomousStateMachine):
     MODE_NAME = "Hold Cargo"
-    DEFAULT = True
     swerveChassis: SwerveChassis
     vision: FROGVision
     firecontrol: ShooterControl
@@ -34,6 +36,7 @@ class HoldCargo(AutonomousStateMachine):
 
 class StraightBackMoveShoot(AutonomousStateMachine):
     MODE_NAME = "Straight Back Move Shoot"
+    DEFAULT = True
     swerveChassis: SwerveChassis
     vision: FROGVision
     intake: Intake
@@ -41,8 +44,10 @@ class StraightBackMoveShoot(AutonomousStateMachine):
     gyro: FROGGyro
     rotation = 0.1
     linear = 0.2
-    flywheel_trim = 1.03
+    flywheel_trim = 1.07
     target_tolerance = 3
+    min_range = 112
+    object_targeted = TARGET_GOAL
 
     @state(first=True)
     def holdBall(self, initial_call):
@@ -56,12 +61,12 @@ class StraightBackMoveShoot(AutonomousStateMachine):
     def waitForGoal(self):
         self.swerveChassis.drive(-0.25, 0, 0)
         if range := self.vision.getRangeInches():
-            if range > 100:
+            if range > self.min_range:
                 self.swerveChassis.field_oriented_drive(0, 0, 0)
-                self.next_state("rotateToTarget")
+                self.next_state("rotateToGoal")
 
     @state()
-    def rotateToTarget(self):
+    def rotateToGoal(self):
 
         self.flyspeed = self.calculateFlywheelSpeed()
         self.shooter.setFlywheelSpeeds(self.flyspeed)
@@ -75,6 +80,10 @@ class StraightBackMoveShoot(AutonomousStateMachine):
             self.next_state("waitForFlywheel")
         else:
             self.swerveChassis.field_oriented_drive(0, 0, vT)
+
+    @state()
+    def rotateToBall(self):
+        pass
 
     @timed_state(duration=5, must_finish=True, next_state="fire")
     def waitForFlywheel(self, initial_call):
@@ -99,11 +108,20 @@ class StraightBackMoveShoot(AutonomousStateMachine):
             # raise launch, self.intake.grab resets
             self.shooter.raiseLaunch()
 
+    # @state()
+    # def rotateToBall(self):
+        
     @state()
     def finish(self):
         self.flyspeed = 0
         self.shooter.setFlywheelSpeeds(self.flyspeed)
         self.swerveChassis.field_oriented_drive(0, 0, 0)
+
+    def getSelectedTargetYaw(self):
+        return [
+            self.vision.getFilteredCargoYaw(),
+            self.vision.getFilteredGoalYaw(),
+        ][self.objectTargeted]
 
     def calculateT(self, targetOffset):
         vT = 0

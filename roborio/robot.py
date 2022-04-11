@@ -121,16 +121,16 @@ class FROGbot(magicbot.MagicRobot):
         )
 
         self.swerveFrontLeft_steerOffset = (
-            133.330078  # 136.143  # 26.807  # 21.796875  # 18.5449219 #13.008
+            132.451172  # 133.330078  # 136.143  # 26.807  # 21.796875  # 18.5449219 #13.008
         )
         self.swerveFrontRight_steerOffset = (
-            -150.380859  # -146.602
+            -149.765625  # -150.380859  # -146.602
         )  # 178.0664  # 177.1875  # 174.023438 #171.914
         self.swerveBackLeft_steerOffset = (
-            3.95507813  # -0.527  # 31.9921875  # 23.0273438  # 22.764
+            3.60351563  # 3.95507813  # -0.527  # 31.9921875  # 23.0273438  # 22.764
         )
         self.swerveBackRight_steerOffset = (
-            -150.117188  # -140.361
+            -150.644531  # -150.117188  # -140.361
         )  # -43.33008  # -43.41797  # -43.242
 
         # flywheel motors
@@ -284,10 +284,9 @@ class FROGbot(magicbot.MagicRobot):
 
         # Get gunner controls
         if self.gunnerControl.getYButtonReleased():
-            self.firecontrol.logShottimer()
+            pass
         if self.gunnerControl.getAButtonReleased():
-            self.shooter.decrementFlywheelSpeeds()
-        # if self.gunnerControl.getBButtonReleased():
+            self.firecontrol.toggleDynamicTolerance()           # if self.gunnerControl.getBButtonReleased():
         #     self.shooter.lowerFlywheel.incrementSpeed()
         # if self.gunnerControl.getXButtonReleased():
         #     self.shooter.lowerFlywheel.decrementSpeed()
@@ -420,28 +419,14 @@ class FROGbot(magicbot.MagicRobot):
             self.intake.raiseIntake()
             self.autoDrive = False
 
-        # if self.driveStick.getRawButtonPressed(7):
-        #     self.lift.activateClaw()
-
-        # if self.driveStick.getRawButtonPressed(8):
-        #     self.lift.deactivateClaw()
-
         # determine twist/rotation
-        if self.targetLock and targetYaw and not self.overrideTargeting:
-            # # self.tOrig = self.getRotationPID(target)
-            # # * self.rotationFactor
-            # # targetX = -visionTwistDeadband(targetX)
-            # # self.vT = math.copysign(targetX**2, targetX)
-            # #self.vT = -math.copysign(targetX ** self.rotationFactor, targetX)
-            # targetAngle = self.gyro.getYaw() - targetYaw
+        if self.driveStick.getPOV() > -1:
+            targetAngle = -(self.driveStick.getPOV() - 180)
+        elif self.targetLock and targetYaw and not self.overrideTargeting:
             if self.firecontrol.isOnTarget():
                 self.vT = 0
             else:
                 self.vT = angleErrorToRotation(-targetYaw)
-        elif self.driveStick.getPOV() > -1:
-            targetAngle = -(self.driveStick.getPOV() - 180)
-            # # angleX = visionTwistDeadband((targetAngle - self.gyro.getYaw())/360)
-            # # self.vT = angleX
         else:
             new_twist = joystickTwistDeadband(
                 self.driveStick.getFieldRotation()
